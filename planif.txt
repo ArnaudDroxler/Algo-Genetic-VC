@@ -1,0 +1,26 @@
+Semaine 1)
+
+Input graphique ou par fichier texte:
+
+Au choix
+
+Semaine 2)
+Squelette:
+* Codage (Structure de données)
+* Selection
+* Terminaison
+
+Semaine 3)
+Opérations génétiques:
+* Croisement 
+* Mutation
+
+Semaine 4)
+Tests intégration
+
+Rendu le 15 Janvier
+Rapport : 1 page qui explique les choix-techniques d'implémentation, mais surtout sur la selection génétique
+
+
+Notes:
+* Le repère est fixé comme 0;0 est en haut à droite de la fenêtre.
