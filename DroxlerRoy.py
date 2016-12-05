@@ -50,18 +50,31 @@ def main():
     position_file = './data/positions.txt'
     connection_file = './data/connections.txt'
 
+    LEFTCLICK = 1                     # Défini ainsi dans pygame
+    WHITE = (255,255,255)
+    POINTSIZE = 5
+
     if len(sys.argv) > 2:
         print('ok')
     else:
         print(main.__doc__)
 
-    fenetre = pygame.display.set_mode((640, 480))
+    window = pygame.display.set_mode((500, 500))
 
-    continuer = True
+    continued = True
 
-    while continuer:
-    	continue
+    while continued:
+        for event in pygame.event.get():
+            # On est obligé de faire en deux lignes car les événements parcourus peuvent retourner false.
+            # On gère la fermeture via ESCAPE ou via la croix de la fenêtre
+            if (event.type == KEYDOWN and event.key == K_ESCAPE) or (event.type == QUIT):
+            	continued = False
 
+            # Gestion des événements souris
+            if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
+                pygame.draw.rect(window, WHITE, (event.pos[0],event.pos[1],POINTSIZE,POINTSIZE))
+
+        pygame.display.update()
 
 if __name__ == '__main__':
     main()
