@@ -1,3 +1,11 @@
+import pygame
+from pygame.locals import *
+
+import sys
+
+def ga_solve(file = None, gui=True, maxtime=0):
+    return true
+
 def main():
     """
         NAME
@@ -46,6 +54,13 @@ def main():
         print('ok')
     else:
         print(main.__doc__)
+
+    fenetre = pygame.display.set_mode((640, 480))
+
+    continuer = True
+
+    while continuer:
+    	continue
 
 
 if __name__ == '__main__':
