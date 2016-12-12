@@ -6,21 +6,28 @@ Au choix
 
 Semaine 2)
 Squelette:
-* Codage (Structure de données)
+* Codage (Structure de donnÃ©es)
 * Selection
 * Terminaison
 
 Semaine 3)
-Opérations génétiques:
-* Croisement 
+OpÃ©rations gÃ©nÃ©tiques:
+* Croisement
 * Mutation
 
 Semaine 4)
-Tests intégration
+Tests intÃ©gration
 
 Rendu le 15 Janvier
-Rapport : 1 page qui explique les choix-techniques d'implémentation, mais surtout sur la selection génétique
+Rapport : 1 page qui explique les choix-techniques d'implÃ©mentation, mais surtout sur la selection gÃ©nÃ©tique
 
 
 Notes:
-* Le repère est fixé comme 0;0 est en haut à droite de la fenêtre.
+* Le repÃ¨re est fixÃ© comme 0;0 est en haut Ã  droite de la fenÃªtre.
+
+IdÃ©es:
+Un chromosome est un ensemble de villes, dont le sÃ©quencement dans un tableau donne la liaison.
+Les villes ne sont que des rÃ©fÃ©rences vers un tableau de villes, globales.
+
+Questions :
+Taille de la population Ã  gÃ©nÃ©rer : 50-100 ou 10'000
