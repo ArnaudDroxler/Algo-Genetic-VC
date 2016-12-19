@@ -3,7 +3,7 @@ from pygame.locals import *
 
 import numpy as np
 
-import sys
+import sys, getopt
 
 def ga_solve(file = None, gui=True, maxtime=0):
     return true
@@ -20,7 +20,7 @@ def solve(cities_list, window):
     # Ne pas oublier de mettre à jour l'affichage via l'objet window
     return True
 
-def main():
+def main(argv):
     """
         NAME
             aStarDistance : Calculate the distance beetween cities using A* Algorith"
@@ -60,25 +60,36 @@ def main():
                                        Hamburg Amsterdam 338
 
                                        It uses the /data/connections.txt path
+    """    
+    optlist, args = getopt.getopt(argv, '' ,['nogui', 'maxtime=','help'])
+    
+    file = None
+    gui = True
+    maxtime = 1000
+    
+    if len(args) == 1:
+        file = args[0]
+    
+    for o,a in optlist : 
+        if o == "--maxtime":
+            maxtime = a
+        if o == "--nogui":
+            gui = False
+        if o == "--help":
+             print(main.__doc__)
+             sys.exit()
+        
     """
-    position_file = './data/positions.txt'
-    connection_file = './data/connections.txt'
-
-
-    #if len(sys.argv) > 2:
-    #    print('ok')
-    #else:
-    #    print(main.__doc__)
-
     graphic = True
-
+    
     if (graphic):
         display()
     else:
         # A remplacer par la lecture du fichier, et le résultat doit aller dans une liste
         cities_list = ()
         display(cities_list)
-
+        """
+        
 def display(cities_list = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
     WHITE = (255,255,255)
@@ -144,4 +155,4 @@ class Chromosome(object):
         return "[" + self.genes + "] : Cost : " + self.cost
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
