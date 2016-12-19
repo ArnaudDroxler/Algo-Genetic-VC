@@ -10,7 +10,7 @@ def ga_solve(file = None, gui=True, maxtime=0):
 
 def solve(cities_list, window):
     # Tuple des villes que le commercial doit parcourir. Il devra être de la bonne taille à l'instanciation
-    cities = np.asarray(mylist)
+    cities = np.asarray(cities_list)
     # Set pour la population. Manifestement une dixaine d'échantillons uniquement
     population = set()
 
@@ -64,10 +64,11 @@ def main():
     position_file = './data/positions.txt'
     connection_file = './data/connections.txt'
 
-    if len(sys.argv) > 2:
-        print('ok')
-    else:
-        print(main.__doc__)
+
+    #if len(sys.argv) > 2:
+    #    print('ok')
+    #else:
+    #    print(main.__doc__)
 
     graphic = True
 
