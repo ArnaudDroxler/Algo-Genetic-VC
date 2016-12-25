@@ -6,10 +6,21 @@ import numpy as np
 
 import sys
 
+
+class Cities(object):
+    """Tableau figé qui représente les villes
+       Classe très mal faite pour le moment, il faudra trouver une solution"""
+    cities_array = None
+
+    def __init__(self, cities_list):
+        # Tuple des villes que le commercial doit parcourir. Il devra être de la bonne taille à l'instanciation
+        Cities.cities_array = np.asarray(cities_list)
+        print(Cities.cities_array)
+
+
 class City(object):
     """Représente une ville possible"""
-    # Il reste à voir si on garde l'id ou juste l'index de la référence du tuple(Tableau de villes
-    # que le chromosome référence). Probablement que l'index.
+    # On ne garde qu'une liste d'indexes pour les gênes afin de ne pas dupliquer l'information
     last_id = 0
 
     #Pour pos, passer un tuple (x,y)
@@ -27,9 +38,16 @@ class Chromosome(object):
     """ représentation d'un individu sous la forme d'un chemin (suite de villes)
     et d'un coût"""
 
-    def __init__(self, genes=None, cost=None):
+    def __init__(self, genes=None):
         self.genes = genes
-        self.cost = cost
+        self.cost = self.set_distance()
+
+    def set_distance(self):
+        distance = 0.0
+        for index in range(0, len(self.genes)):
+            distance += 1
+
+        print(distance)
 
     def __repr__(self):
         return '[%s]' % ', '.join(map(str, self.genes)) + "] : Cost : " + str(self.cost)
@@ -38,7 +56,7 @@ class Chromosome(object):
 def ga_solve(file = None, gui=True, maxtime=0):
     return true
 
-def populate(count, cities):
+def populate(count):
     population = set()
 
     available_indexes = []
@@ -47,31 +65,29 @@ def populate(count, cities):
     for i in range(0,count):
         indexes_list = []
 
-        for index in range(0, len(cities)):
+        print(Cities.cities_array)
+
+        for index in range(0, len(Cities.cities_array)):
             available_indexes.append(index)
             print(index)
 
         while (len(available_indexes) > 0):
             index = random.randint(0, len(available_indexes)-1)
-            print("Index : ", index)
-            print("liste_indexs avant : ", indexes_list)
             indexes_list.append(available_indexes[index])
-            print("liste_indexs après : ", indexes_list)
-            print("Indexs disponibles avant remove : ", available_indexes)
             del available_indexes[index]
-            print("Indexs disponibles après remove : ", available_indexes)
 
-        population.add(Chromosome(indexes_list, 0))
+        population.add(Chromosome(indexes_list))
 
     return population
 
 
 def solve(cities_list, window):
-    # Tuple des villes que le commercial doit parcourir. Il devra être de la bonne taille à l'instanciation
-    cities = np.asarray(cities_list)
+    #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
+    ref_cities = Cities(cities_list)
 
-    population = populate(10, cities)
+    population = populate(10)
 
+    print("Je print les Chromosomes")
     for chromo in population:
         print(chromo)
 
