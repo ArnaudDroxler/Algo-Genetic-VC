@@ -1,10 +1,101 @@
 import pygame
 from pygame.locals import *
 
+import random
+import numpy as np
+
 import sys
+
+
+class Cities(object):
+    """Tableau figé qui représente les villes
+       Classe très mal faite pour le moment, il faudra trouver une solution"""
+    cities_array = None
+
+    def __init__(self, cities_list):
+        # Tuple des villes que le commercial doit parcourir. Il devra être de la bonne taille à l'instanciation
+        Cities.cities_array = np.asarray(cities_list)
+        print(Cities.cities_array)
+
+
+class City(object):
+    """Représente une ville possible"""
+    # On ne garde qu'une liste d'indexes pour les gênes afin de ne pas dupliquer l'information
+    last_id = 0
+
+    #Pour pos, passer un tuple (x,y)
+    def __init__(self, pos, name = None):
+        City.last_id = City.last_id + 1
+
+        self.id = City.last_id
+        self.name = name
+        self.pos = pos
+
+    def __repr__(self):
+        return "[id:" + str(self.id) + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
+
+class Chromosome(object):
+    """ représentation d'un individu sous la forme d'un chemin (suite de villes)
+    et d'un coût"""
+
+    def __init__(self, genes=None):
+        self.genes = genes
+        self.cost = self.set_distance()
+
+    def set_distance(self):
+        distance = 0.0
+        for index in range(0, len(self.genes)):
+            distance += 1
+
+        print(distance)
+
+    def __repr__(self):
+        return '[%s]' % ', '.join(map(str, self.genes)) + "] : Cost : " + str(self.cost)
+
 
 def ga_solve(file = None, gui=True, maxtime=0):
     return true
+
+def populate(count):
+    population = set()
+
+    available_indexes = []
+
+    # Pour chaque échantillon de la population à créer
+    for i in range(0,count):
+        indexes_list = []
+
+        print(Cities.cities_array)
+
+        for index in range(0, len(Cities.cities_array)):
+            available_indexes.append(index)
+            print(index)
+
+        while (len(available_indexes) > 0):
+            index = random.randint(0, len(available_indexes)-1)
+            indexes_list.append(available_indexes[index])
+            del available_indexes[index]
+
+        population.add(Chromosome(indexes_list))
+
+    return population
+
+
+def solve(cities_list, window):
+    #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
+    ref_cities = Cities(cities_list)
+
+    population = populate(10)
+
+    print("Je print les Chromosomes")
+    for chromo in population:
+        print(chromo)
+
+    print("Liste des villes")
+    print(cities_list)
+
+    # Ne pas oublier de mettre à jour l'affichage via l'objet window
+    return True
 
 def main():
     """
@@ -50,29 +141,52 @@ def main():
     position_file = './data/positions.txt'
     connection_file = './data/connections.txt'
 
+
+    # print(main.__doc__)
+
+    graphic = True
+
+    if (graphic):
+        display()
+    else:
+        # A remplacer par la lecture du fichier, et le résultat doit aller dans une liste
+        cities_list = ()
+        display(cities_list)
+
+def display(cities_list = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
     WHITE = (255,255,255)
     POINTSIZE = 5
 
-    if len(sys.argv) > 2:
-        print('ok')
-    else:
-        print(main.__doc__)
+    if cities_list == None:
+        cities_list = []
 
     window = pygame.display.set_mode((500, 500))
+
+    # Draw a rectangle outline
+    lauch_button = pygame.draw.rect(window, WHITE, [0, 0, 50, 20], 2)
 
     continued = True
 
     while continued:
+        mouse_xy = pygame.mouse.get_pos()
+        over_launch = lauch_button.collidepoint(mouse_xy)
+
         for event in pygame.event.get():
             # On est obligé de faire en deux lignes car les événements parcourus peuvent retourner false.
             # On gère la fermeture via ESCAPE ou via la croix de la fenêtre
             if (event.type == KEYDOWN and event.key == K_ESCAPE) or (event.type == QUIT):
-            	continued = False
+                continued = False
 
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
-                pygame.draw.rect(window, WHITE, (event.pos[0],event.pos[1],POINTSIZE,POINTSIZE))
+                if over_launch:
+                    solve(cities_list, window)
+                else:
+                    x_mouse, y_mouse = event.pos[0], event.pos[1]
+                    # Attention : envoie une liste de tuples! La synthaxe est fine.
+                    cities_list.append(City(pos=(x_mouse, y_mouse)))
+                    pygame.draw.rect(window, WHITE, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
 
         pygame.display.update()
 
