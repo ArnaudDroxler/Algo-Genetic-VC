@@ -58,17 +58,8 @@ class Chromosome(object):
             else:
                 villeB = Cities.cities_array[self.genes[index+1]]
 
-            current_x, current_y =  villeA.pos
-            dest_x, dest_y =  villeB.pos
+            distance += villeA.pos.distance_to(villeB.pos)
 
-            dx = abs(current_x - dest_x)
-            dy = abs(current_y - dest_y)
-            distance += sqrt(dx**2+dy**2)
-
-            print("index : ", index, " nb_genes : ", nb_genes)
-            print("Ville A", villeA)
-            print("Ville B", villeB)
-            print("dx : ", dx, " dy : ", dy)
             print("distance", distance)
 
         return distance
