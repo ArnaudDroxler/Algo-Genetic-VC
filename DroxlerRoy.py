@@ -1,35 +1,30 @@
 import pygame
 from pygame.locals import *
+from pygame.math import Vector2
 
 import random
 import numpy as np
+from numpy import sqrt
 
 import sys
 
-
-class Cities(object):
-    """Tableau figé qui représente les villes
-       Classe très mal faite pour le moment, il faudra trouver une solution"""
-    cities_array = None
-
-    def __init__(self, cities_list):
-        # Tuple des villes que le commercial doit parcourir. Il devra être de la bonne taille à l'instanciation
-        Cities.cities_array = np.asarray(cities_list)
-        print(Cities.cities_array)
-
+# Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
+cities_array = None
 
 class City(object):
-    """Représente une ville possible"""
+    """Représente une ville possible, avec un identifiant (à voir si il reste),
+       un nom inutile, et une position. Les infos inutiles pourraient devenir
+       utiles à l'avenir.
+    """
     # On ne garde qu'une liste d'indexes pour les gênes afin de ne pas dupliquer l'information
     last_id = 0
 
     #Pour pos, passer un tuple (x,y)
     def __init__(self, pos, name = None):
-        City.last_id = City.last_id + 1
-
         self.id = City.last_id
         self.name = name
-        self.pos = pos
+        self.pos = Vector2(pos)
+        City.last_id = City.last_id + 1
 
     def __repr__(self):
         return "[id:" + str(self.id) + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
@@ -43,11 +38,20 @@ class Chromosome(object):
         self.cost = self.set_distance()
 
     def set_distance(self):
-        distance = 0.0
-        for index in range(0, len(self.genes)):
-            distance += 1
+        nb_genes = len(self.genes)
+        distance = 0
 
-        print(distance)
+        # On pourra changer pour la classe Vec2D, qui fournit des méthodes de distance
+        for index in range(0, len(self.genes)):
+            villeA = cities_array[self.genes[index]]
+
+            if index == nb_genes-1:
+                villeB = cities_array[self.genes[0]]
+            else:
+                villeB = cities_array[self.genes[index+1]]
+
+            distance += villeA.pos.distance_to(villeB.pos)
+        return distance
 
     def __repr__(self):
         return '[%s]' % ', '.join(map(str, self.genes)) + "] : Cost : " + str(self.cost)
@@ -57,6 +61,7 @@ def ga_solve(file = None, gui=True, maxtime=0):
     return true
 
 def populate(count):
+    """Crée une population de n individus selon la liste de ville auparavant déterminée"""
     population = set()
 
     available_indexes = []
@@ -65,15 +70,18 @@ def populate(count):
     for i in range(0,count):
         indexes_list = []
 
-        print(Cities.cities_array)
-
-        for index in range(0, len(Cities.cities_array)):
+        # On instancie une liste d'index de 0 à n-ville - 1
+        for index in range(0, len(cities_array)):
             available_indexes.append(index)
-            print(index)
 
+        # On utilise ici une liste d'index afin de minimiser les appels au random
+        # Tant qu'il reste encore des index (attention, ils ne sont pas forcément consécutifs)
         while (len(available_indexes) > 0):
+            # On tire au hasard un index entre 0 et la longueur de la chaine
             index = random.randint(0, len(available_indexes)-1)
+            # On ajoute la valeur contenue à l'index à la séquence de villes
             indexes_list.append(available_indexes[index])
+            # On retire l'index de la ville
             del available_indexes[index]
 
         population.add(Chromosome(indexes_list))
@@ -83,11 +91,12 @@ def populate(count):
 
 def solve(cities_list, window):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
-    ref_cities = Cities(cities_list)
+    global cities_array
+    cities_array = np.asarray(cities_list)
 
-    population = populate(10)
+    population = populate(5)
 
-    print("Je print les Chromosomes")
+    print("Chromosomes")
     for chromo in population:
         print(chromo)
 
@@ -144,13 +153,13 @@ def main():
 
     # print(main.__doc__)
 
-    graphic = True
+    graphic = False
 
     if (graphic):
         display()
     else:
         # A remplacer par la lecture du fichier, et le résultat doit aller dans une liste
-        cities_list = ()
+        cities_list = (City((0,0)),City((20, 20)),City((40, 40)), City((60, 60)))
         display(cities_list)
 
 def display(cities_list = None):
