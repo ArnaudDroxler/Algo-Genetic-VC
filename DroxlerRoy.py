@@ -8,16 +8,8 @@ from numpy import sqrt
 
 import sys
 
-
-class Cities(object):
-    """Tableau figé qui représente les villes.
-       Classe très mal faite pour le moment, il faudra trouver une solution"""
-    cities_array = None
-
-    def __init__(self, cities_list):
-        # Tuple des villes que le commercial doit parcourir. Il devra être de la bonne taille à l'instanciation
-        Cities.cities_array = np.asarray(cities_list)
-
+# Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
+cities_array = None
 
 class City(object):
     """Représente une ville possible, avec un identifiant (à voir si il reste),
@@ -51,17 +43,14 @@ class Chromosome(object):
 
         # On pourra changer pour la classe Vec2D, qui fournit des méthodes de distance
         for index in range(0, len(self.genes)):
-            villeA = Cities.cities_array[self.genes[index]]
+            villeA = cities_array[self.genes[index]]
 
             if index == nb_genes-1:
-                villeB = Cities.cities_array[self.genes[0]]
+                villeB = cities_array[self.genes[0]]
             else:
-                villeB = Cities.cities_array[self.genes[index+1]]
+                villeB = cities_array[self.genes[index+1]]
 
             distance += villeA.pos.distance_to(villeB.pos)
-
-            print("distance", distance)
-
         return distance
 
     def __repr__(self):
@@ -82,7 +71,7 @@ def populate(count):
         indexes_list = []
 
         # On instancie une liste d'index de 0 à n-ville - 1
-        for index in range(0, len(Cities.cities_array)):
+        for index in range(0, len(cities_array)):
             available_indexes.append(index)
 
         # On utilise ici une liste d'index afin de minimiser les appels au random
@@ -102,11 +91,12 @@ def populate(count):
 
 def solve(cities_list, window):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
-    Cities(cities_list)
+    global cities_array
+    cities_array = np.asarray(cities_list)
 
     population = populate(5)
 
-    print("Print les Chromosomes")
+    print("Chromosomes")
     for chromo in population:
         print(chromo)
 
