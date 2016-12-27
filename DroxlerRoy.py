@@ -3,13 +3,10 @@ from pygame.locals import *
 from pygame.math import Vector2
 
 import random
-import numpy as np
-from numpy import sqrt
-
 import sys
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
-cities_array = None
+cities = None
 
 class City(object):
     """Représente une ville possible, avec un identifiant (à voir si il reste),
@@ -43,12 +40,12 @@ class Chromosome(object):
 
         # On pourra changer pour la classe Vec2D, qui fournit des méthodes de distance
         for index in range(0, len(self.genes)):
-            villeA = cities_array[self.genes[index]]
+            villeA = cities[self.genes[index]]
 
             if index == nb_genes-1:
-                villeB = cities_array[self.genes[0]]
+                villeB = cities[self.genes[0]]
             else:
-                villeB = cities_array[self.genes[index+1]]
+                villeB = cities[self.genes[index+1]]
 
             distance += villeA.pos.distance_to(villeB.pos)
         return distance
@@ -71,8 +68,11 @@ def populate(count):
         indexes_list = []
 
         # On instancie une liste d'index de 0 à n-ville - 1
-        for index in range(0, len(cities_array)):
-            available_indexes.append(index)
+        # for index in range(0, len(cities)):
+        # for index, value in enumerate(cities):
+        #     available_indexes.append(index)
+        available_indexes = list(range(len(cities)))
+
 
         # On utilise ici une liste d'index afin de minimiser les appels au random
         # Tant qu'il reste encore des index (attention, ils ne sont pas forcément consécutifs)
@@ -83,16 +83,14 @@ def populate(count):
             indexes_list.append(available_indexes[index])
             # On retire l'index de la ville
             del available_indexes[index]
-
         population.add(Chromosome(indexes_list))
-
     return population
 
 
 def solve(cities_list, window):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
-    global cities_array
-    cities_array = np.asarray(cities_list)
+    global cities
+    cities = tuple(cities_list)
 
     population = populate(5)
 
@@ -159,7 +157,7 @@ def main():
         display()
     else:
         # A remplacer par la lecture du fichier, et le résultat doit aller dans une liste
-        cities_list = (City((0,0)),City((20, 20)),City((40, 40)), City((60, 60)))
+        cities_list = [City((0,0)),City((20, 20)),City((40, 40)), City((60, 60))]
         display(cities_list)
 
 def display(cities_list = None):
@@ -167,10 +165,14 @@ def display(cities_list = None):
     WHITE = (255,255,255)
     POINTSIZE = 5
 
-    if cities_list == None:
-        cities_list = []
 
     window = pygame.display.set_mode((500, 500))
+
+    if cities_list == None:
+        cities_list = []
+    else:
+        for point in cities_list:
+            pygame.draw.rect(window, WHITE, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
 
     # Draw a rectangle outline
     lauch_button = pygame.draw.rect(window, WHITE, [0, 0, 50, 20], 2)
