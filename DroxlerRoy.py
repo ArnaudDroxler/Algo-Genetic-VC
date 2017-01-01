@@ -1,18 +1,104 @@
 import pygame
 from pygame.locals import *
+from pygame.math import Vector2
 
 import numpy as np
 
 import sys, getopt
+import random
+
+# Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
+cities = None
+
+class City(object):
+    """Représente une ville possible, avec un identifiant (à voir si il reste),
+       un nom inutile, et une position. Les infos inutiles pourraient devenir
+       utiles à l'avenir.
+    """
+    # On ne garde qu'une liste d'indexes pour les gênes afin de ne pas dupliquer l'information
+    last_id = 0
+
+    #Pour pos, passer un tuple (x,y)
+    def __init__(self, pos, name = None):
+        self.id = City.last_id
+        self.name = name
+        self.pos = Vector2(pos)
+        City.last_id = City.last_id + 1
+
+    def __repr__(self):
+        return "[id:" + str(self.id) + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
+
+class Chromosome(object):
+    """ représentation d'un individu sous la forme d'un chemin (suite de villes)
+    et d'un coût"""
+
+    def __init__(self, genes=None):
+        self.genes = genes
+        self.cost = self.set_distance()
+
+    def set_distance(self):
+        nb_genes = len(self.genes)
+        distance = 0
+
+        # On pourra changer pour la classe Vec2D, qui fournit des méthodes de distance
+        for index in range(0, len(self.genes)):
+            villeA = cities[self.genes[index]]
+
+            if index == nb_genes-1:
+                villeB = cities[self.genes[0]]
+            else:
+                villeB = cities[self.genes[index+1]]
+
+            distance += villeA.pos.distance_to(villeB.pos)
+        return distance
+
+    def __repr__(self):
+        return '[%s]' % ', '.join(map(str, self.genes)) + "] : Cost : " + str(self.cost)
+
 
 def ga_solve(file = None, gui=True, maxtime=0):
     return true
 
-def solve(cities_list, window):
-    # Tuple des villes que le commercial doit parcourir. Il devra être de la bonne taille à l'instanciation
-    cities = np.asarray(cities_list)
-    # Set pour la population. Manifestement une dixaine d'échantillons uniquement
+def populate(count):
+    """Crée une population de n individus selon la liste de ville auparavant déterminée"""
     population = set()
+
+    available_indexes = []
+
+    # Pour chaque échantillon de la population à créer
+    for i in range(0,count):
+        indexes_list = []
+
+        # On instancie une liste d'index de 0 à n-ville - 1
+        # for index in range(0, len(cities)):
+        # for index, value in enumerate(cities):
+        #     available_indexes.append(index)
+        available_indexes = list(range(len(cities)))
+
+
+        # On utilise ici une liste d'index afin de minimiser les appels au random
+        # Tant qu'il reste encore des index (attention, ils ne sont pas forcément consécutifs)
+        while (len(available_indexes) > 0):
+            # On tire au hasard un index entre 0 et la longueur de la chaine
+            index = random.randint(0, len(available_indexes)-1)
+            # On ajoute la valeur contenue à l'index à la séquence de villes
+            indexes_list.append(available_indexes[index])
+            # On retire l'index de la ville
+            del available_indexes[index]
+        population.add(Chromosome(indexes_list))
+    return population
+
+
+def solve(cities_list, window):
+    #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
+    global cities
+    cities = tuple(cities_list)
+
+    population = populate(5)
+
+    print("Chromosomes")
+    for chromo in population:
+        print(chromo)
 
     print("Liste des villes")
     print(cities_list)
@@ -80,13 +166,24 @@ def main(argv):
              sys.exit()
         
     """
+<<<<<<< HEAD
     graphic = True
     
+=======
+    position_file = './data/positions.txt'
+    connection_file = './data/connections.txt'
+
+
+    # print(main.__doc__)
+
+    graphic = False
+
+>>>>>>> 0153d43f424ed0bf060dbb7da1f3470aaf1882be
     if (graphic):
         display()
     else:
         # A remplacer par la lecture du fichier, et le résultat doit aller dans une liste
-        cities_list = ()
+        cities_list = [City((0,0)),City((20, 20)),City((40, 40)), City((60, 60))]
         display(cities_list)
         """
         
@@ -95,10 +192,14 @@ def display(cities_list = None):
     WHITE = (255,255,255)
     POINTSIZE = 5
 
-    if cities_list == None:
-        cities_list = []
 
     window = pygame.display.set_mode((500, 500))
+
+    if cities_list == None:
+        cities_list = []
+    else:
+        for point in cities_list:
+            pygame.draw.rect(window, WHITE, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
 
     # Draw a rectangle outline
     lauch_button = pygame.draw.rect(window, WHITE, [0, 0, 50, 20], 2)
@@ -126,33 +227,6 @@ def display(cities_list = None):
                     pygame.draw.rect(window, WHITE, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
 
         pygame.display.update()
-
-
-class City(object):
-    # Il reste à voir si on garde l'id ou juste l'index de la référence du tuple(Tableau de villes
-    # que le chromosome référence). Probablement que l'index.
-    last_id = 0
-
-    #Pour pos, passer un tuple (x,y)
-    def __init__(self, pos, name = None):
-        City.last_id = City.last_id + 1
-
-        self.id = City.last_id
-        self.name = name
-        self.pos = pos
-
-    def __repr__(self):
-        return "[id:" + str(self.id) + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
-
-class Chromosome(object):
-    # représentation d'un individu
-
-    def __init__(self, genes=None, cost=None):
-        self.genes = genes
-        self.cost = cost
-
-    def __repr__(self):
-        return "[" + self.genes + "] : Cost : " + self.cost
 
 if __name__ == '__main__':
     main(sys.argv[1:])
