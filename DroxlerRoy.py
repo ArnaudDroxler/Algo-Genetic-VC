@@ -109,43 +109,24 @@ def solve(cities_list, window):
 def main(argv):
     """
         NAME
-            aStarDistance : Calculate the distance beetween cities using A* Algorith"
+            TSP : Solve the travelling salesman problem using genetic algorithm
 
         SYNOPSIS
-            aStarDistance [cities_description_file] [links_description_file] optionnal:[heuristic_method]
-
-        DESCRIPTION
-            This method permits to specify the description files for the cities and the links beetween them.
-
+            python DroxlerRoy.py [--nogui] [--maxtime s] [filename]
+            
         PARAMETERS
-            [from_city] : City name from where to start
+            [--nogui] : disable the gui, default to true
 
-            [to_city] : City name to join
+            [--maxtime s] : diffine the maximum time of exectution in seconds , default at 1000 s
 
-            [heuristic_method]   : Number 0 to 4 describing the heuristic method to use with the A* Algorithm
-                                   0 : No heuristic method (DEFAULT)
-                                   1 : Distance beetween cities using only X axis
-                                   2 : Distance beetween cities using only Y axis
-                                   3 : Bird flying distance
-                                   4 : Manhattan distance
-        FILES
-            [cities_description_file] : Format expected :
+            [filename] : Format expected :
                                         City_Name X_Position Y_Position
                                         i.e :
-                                        Copenhagen 687 1323
-                                        Hamburg 774 1175
+                                        v0 54 391
+                                        v1 77 315
 
-                                        It uses the /data/positions.txt path
-
-
-            [links_description_file] : The links beetween cities file. Format expected :
-                                       City_Name_From City_Name_To Distance_In_Km
-
-                                       i.e :
-                                       Copenhagen Hamburg 180
-                                       Hamburg Amsterdam 338
-
-                                       It uses the /data/connections.txt path
+                                        It uses the /data/pb010.txt path
+       
     """    
     optlist, args = getopt.getopt(argv, '' ,['nogui', 'maxtime=','help'])
     
