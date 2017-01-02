@@ -24,7 +24,7 @@ class City(object):
         City.last_id = City.last_id + 1
 
     def __repr__(self):
-        return "[id:" + str(self.id) + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
+        return "[id:" + str(self.id) + " X:" + str(self.pos.x) + " Y:" + str(self.pos.x) + "]"
 
 class Chromosome(object):
     """ représentation d'un individu sous la forme d'un chemin (suite de villes)
@@ -67,12 +67,7 @@ def populate(count):
     for i in range(0,count):
         indexes_list = []
 
-        # On instancie une liste d'index de 0 à n-ville - 1
-        # for index in range(0, len(cities)):
-        # for index, value in enumerate(cities):
-        #     available_indexes.append(index)
         available_indexes = list(range(len(cities)))
-
 
         # On utilise ici une liste d'index afin de minimiser les appels au random
         # Tant qu'il reste encore des index (attention, ils ne sont pas forcément consécutifs)
@@ -92,7 +87,7 @@ def solve(cities_list, window):
     global cities
     cities = tuple(cities_list)
 
-    population = populate(5)
+    population = populate(10)
 
     print("Chromosomes")
     for chromo in population:
@@ -100,6 +95,19 @@ def solve(cities_list, window):
 
     print("Liste des villes")
     print(cities_list)
+
+    # Ajouter les deux autres conditions de fin : Convergeance et temps
+    passes = 1
+    while not passes <= 0:
+        # Evaluation
+        print("Evaluation")
+        # Sélection
+        print("Sélection")
+        # Mutations
+        print("Mutation")
+        passes -= 1
+
+        # Mise à jour de l'affichage
 
     # Ne pas oublier de mettre à jour l'affichage via l'objet window
     return True
@@ -148,7 +156,6 @@ def main():
     position_file = './data/positions.txt'
     connection_file = './data/connections.txt'
 
-
     # print(main.__doc__)
 
     graphic = False
@@ -164,7 +171,6 @@ def display(cities_list = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
     WHITE = (255,255,255)
     POINTSIZE = 5
-
 
     window = pygame.display.set_mode((500, 500))
 
