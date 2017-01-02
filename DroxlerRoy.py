@@ -145,28 +145,19 @@ def main(argv):
         if o == "--help":
              print(main.__doc__)
              sys.exit()
-        
-    """
-<<<<<<< HEAD
-    graphic = True
     
-=======
-    position_file = './data/positions.txt'
-    connection_file = './data/connections.txt'
-
-
-    # print(main.__doc__)
-
-    graphic = False
-
->>>>>>> 0153d43f424ed0bf060dbb7da1f3470aaf1882be
-    if (graphic):
+    cities_list = []
+    
+    if (gui):
         display()
     else:
-        # A remplacer par la lecture du fichier, et le résultat doit aller dans une liste
-        cities_list = [City((0,0)),City((20, 20)),City((40, 40)), City((60, 60))]
-        display(cities_list)
-        """
+         with open(file, "r") as fichier :
+            for line in fichier :
+                data = line.split()
+                cities_list.append(City(float(data[1]),float(data[2])))
+    
+    display(cities_list)
+
         
 def display(cities_list = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
