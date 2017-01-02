@@ -156,11 +156,6 @@ def main(argv):
                 data = line.split()
                 print(data[2])
                 cities_list.append(City((int(data[1]),int(data[2]))))
-                
-        #cities_list = (City((0,0)),City((20, 20)),City((40, 40)), City((60, 60)))
-    
-    for i in cities_list:
-        print(i)
     display(cities_list)
 
         
