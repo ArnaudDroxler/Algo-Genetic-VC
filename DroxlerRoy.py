@@ -2,8 +2,10 @@ import pygame
 from pygame.locals import *
 from pygame.math import Vector2
 
+import numpy as np
+
+import sys, getopt
 import random
-import sys
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
 cities = None
@@ -24,7 +26,7 @@ class City(object):
         City.last_id = City.last_id + 1
 
     def __repr__(self):
-        return "[id:" + str(self.id) + " X:" + str(self.pos.x) + " Y:" + str(self.pos.x) + "]"
+        return "[id:" + str(self.id) + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
 
 class Chromosome(object):
     """ représentation d'un individu sous la forme d'un chemin (suite de villes)
@@ -67,7 +69,12 @@ def populate(count):
     for i in range(0,count):
         indexes_list = []
 
+        # On instancie une liste d'index de 0 à n-ville - 1
+        # for index in range(0, len(cities)):
+        # for index, value in enumerate(cities):
+        #     available_indexes.append(index)
         available_indexes = list(range(len(cities)))
+
 
         # On utilise ici une liste d'index afin de minimiser les appels au random
         # Tant qu'il reste encore des index (attention, ils ne sont pas forcément consécutifs)
@@ -87,7 +94,7 @@ def solve(cities_list, window):
     global cities
     cities = tuple(cities_list)
 
-    population = populate(10)
+    population = populate(5)
 
     print("Chromosomes")
     for chromo in population:
@@ -96,81 +103,63 @@ def solve(cities_list, window):
     print("Liste des villes")
     print(cities_list)
 
-    # Ajouter les deux autres conditions de fin : Convergeance et temps
-    passes = 1
-    while not passes <= 0:
-        # Evaluation
-        print("Evaluation")
-        # Sélection
-        print("Sélection")
-        # Mutations
-        print("Mutation")
-        passes -= 1
-
-        # Mise à jour de l'affichage
-
     # Ne pas oublier de mettre à jour l'affichage via l'objet window
     return True
 
-def main():
+def main(argv):
     """
         NAME
-            aStarDistance : Calculate the distance beetween cities using A* Algorith"
-
+            TSP : Solve the travelling salesman problem using genetic algorithm
         SYNOPSIS
-            aStarDistance [cities_description_file] [links_description_file] optionnal:[heuristic_method]
-
-        DESCRIPTION
-            This method permits to specify the description files for the cities and the links beetween them.
+            python DroxlerRoy.py [--nogui] [--maxtime s] [filename]
 
         PARAMETERS
-            [from_city] : City name from where to start
-
-            [to_city] : City name to join
-
-            [heuristic_method]   : Number 0 to 4 describing the heuristic method to use with the A* Algorithm
-                                   0 : No heuristic method (DEFAULT)
-                                   1 : Distance beetween cities using only X axis
-                                   2 : Distance beetween cities using only Y axis
-                                   3 : Bird flying distance
-                                   4 : Manhattan distance
-        FILES
-            [cities_description_file] : Format expected :
+            [--nogui] : disable the gui, default to true
+            [--maxtime s] : diffine the maximum time of exectution in seconds , default at 1000 s
+            [filename] : Format expected :
                                         City_Name X_Position Y_Position
                                         i.e :
-                                        Copenhagen 687 1323
-                                        Hamburg 774 1175
+                                        v0 54 391
+                                        v1 77 315
+                                        It uses the /data/pb010.txt path
 
-                                        It uses the /data/positions.txt path
-
-
-            [links_description_file] : The links beetween cities file. Format expected :
-                                       City_Name_From City_Name_To Distance_In_Km
-
-                                       i.e :
-                                       Copenhagen Hamburg 180
-                                       Hamburg Amsterdam 338
-
-                                       It uses the /data/connections.txt path
     """
-    position_file = './data/positions.txt'
-    connection_file = './data/connections.txt'
+    optlist, args = getopt.getopt(argv, '' ,['nogui', 'maxtime=','help'])
 
-    # print(main.__doc__)
+    file = None
+    gui = True
+    maxtime = 1000
 
-    graphic = False
+    if len(args) == 1:
+        file = args[0]
 
-    if (graphic):
+    for o,a in optlist :
+        if o == "--maxtime":
+            maxtime = a
+        if o == "--nogui":
+            gui = False
+        if o == "--help":
+             print(main.__doc__)
+             sys.exit()
+
+    cities_list = []
+
+    if (gui):
         display()
     else:
-        # A remplacer par la lecture du fichier, et le résultat doit aller dans une liste
-        cities_list = [City((0,0)),City((20, 20)),City((40, 40)), City((60, 60))]
-        display(cities_list)
+         with open(file, "r") as fichier :
+            for line in fichier :
+                data = line.split()
+                print(data[2])
+                cities_list.append(City((int(data[1]),int(data[2]))))
+    display(cities_list)
+
 
 def display(cities_list = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
     WHITE = (255,255,255)
     POINTSIZE = 5
+
 
     window = pygame.display.set_mode((500, 500))
 
@@ -208,4 +197,4 @@ def display(cities_list = None):
         pygame.display.update()
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
