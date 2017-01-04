@@ -96,9 +96,10 @@ def crossing(population, size):
 
     """
     # TODO : Range dynamique
-    # start_xo_index = int(len(population[0].genes) / 2 - len(population[0].genes) / 4)
-    start_xo_index = 3
-    end_xo_index = 5
+    start_xo_index = int(len(population[0].genes) / 2 - len(population[0].genes) / 4)
+    end_xo_index = int(len(population[0].genes) / 2 + len(population[0].genes) / 4)
+    # start_xo_index = 3
+    # end_xo_index = 5
     nb_to_create = size - len(population)
 
     for chromosome_index in range(0, nb_to_create):
@@ -137,6 +138,7 @@ def crossing(population, size):
     return population
 
 def mutate(population):
+    """Pour l'instant, la mutation est un simple swap d'indexs au hasard"""
     for chromosome in population:
         index1 = random.randint(0, len(chromosome.genes)-1)
         index2 =  random.randint(0, len(chromosome.genes)-1)
@@ -162,10 +164,11 @@ def solve(cities_list, rounds = 100, window = None):
     print(rounds)
 
     while rounds > 0:
-        if window != None:
-            draw_best_path(population, window)
         print("Selection")
         population = selection(population)
+        print("Affichage")
+        if window != None:
+            draw_best_path(population, window)
         print("Croisement")
         population = crossing(population, population_size)
         print("Mutations")
