@@ -136,6 +136,14 @@ def crossing(population, size):
 
     return population
 
+def mutate(population):
+    for chromosome in population:
+        index1 = random.randint(0, len(chromosome.genes)-1)
+        index2 =  random.randint(0, len(chromosome.genes)-1)
+        chromosome.genes[index1], chromosome.genes[index2] = chromosome.genes[index2], chromosome.genes[index1]
+
+    return population
+
 def solve(cities_list, rounds = 100, window = None):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
     global cities
@@ -161,6 +169,7 @@ def solve(cities_list, rounds = 100, window = None):
         print("Croisement")
         population = crossing(population, population_size)
         print("Mutations")
+        population = mutate(population)
         rounds -= 1
 
     # Ne pas oublier de mettre à jour l'affichage via l'objet window
