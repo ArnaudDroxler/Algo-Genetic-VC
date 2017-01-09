@@ -1,7 +1,7 @@
 import pygame
 from pygame.locals import *
 from pygame.math import Vector2
-
+from itertools import cycle
 import numpy as np
 
 import sys, getopt
@@ -9,12 +9,13 @@ import random
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
 cities = None
-population_size = 50
+population_size = 20
 mutation_rate = 20
+selection_rate = 20
+rounds = 100
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 POINTSIZE = 3
-
 
 ################################################################################
 #  Algorithme génétique
@@ -29,7 +30,7 @@ def populate(count):
     # Pour chaque échantillon de la population à créer
     for i in range(0,count):
         indexes_list = []
-        
+
         available_indexes = list(range(len(cities)))
 
         # On utilise ici une liste d'index afin de minimiser les appels au random
@@ -47,7 +48,7 @@ def populate(count):
 
 def selection(population):
     population = sorted(population, key=lambda chromosome: chromosome.cost)
-    population = population[:(int)(len(population)/2)]
+    population = population[:(int)(len(population)/100 * selection_rate)]
 
     return population
 
@@ -96,6 +97,7 @@ def crossing(population, size):
 
     nb_to_create = size - len(population)
 
+    # Peut être fait par cycle, mais la méthode va être changée
     for chromosome_index in range(0, nb_to_create):
         # Choix des chromosomes, pour le moment consécutifs
         # TODO : Changer le choix des échantillons dans la population
@@ -119,7 +121,7 @@ def crossing(population, size):
         new_genes_list = [value for value in new_genes_list if not value == None]
 
         # Rotation à droite des éléments
-        for counter in range(0,nb_none_right):
+        for _ in range(0,nb_none_right):
             new_genes_list.insert(len(new_genes_list), new_genes_list.pop(0))
         list_to_insert = chromosome_y.genes[start_xo_index:end_xo_index+1]
 
@@ -139,7 +141,7 @@ def mutate(population):
 
     return population
 
-def solve(cities_list, rounds = 100, window = None):
+def solve(cities_list, rounds = 50, window = None, maxtime = 0):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
     global cities
     global population_size
@@ -239,8 +241,6 @@ def clear_window(window):
 def draw_best_path(population, window):
     clear_window(window)
 
-    print(population[0])
-
     list_points = []
     best_genes_list = population[0].genes
     for gene in best_genes_list:
@@ -252,6 +252,7 @@ def draw_best_path(population, window):
 
 def display(cities_list = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
+    global rounds
 
     window = pygame.display.set_mode((500, 500))
 
@@ -279,7 +280,7 @@ def display(cities_list = None):
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
                 if over_launch:
-                    solve(cities_list, 20, window)
+                    solve(cities_list, rounds, window)
                 else:
                     x_mouse, y_mouse = event.pos[0], event.pos[1]
                     # Attention : envoie une liste de tuples! La synthaxe est fine.
@@ -318,38 +319,30 @@ class Chromosome(object):
         self.genes = genes
         self.cost = 0
         if not self.genes == None:
-            self.cost = self.set_distance()
+            self.cost = self.calculate_cost()
 
     def mutate(self):
         """Mutation du chromosome simple en inversant deux indexes au hasard.
-           On ne garde la mutation que si elle est meilleure"""
-        old_combinaison = list(self.genes)
-        old_cost = self.cost
+           On ne garde la mutation que si elle est meilleure. Il se trouve
+           que l'on pourrait imaginer qu'inverser deux villes connexes pourrait
+           améliorer le résultat mais ca ne semble pas être le cas."""
 
         index1 = random.randrange(0, len(self.genes))
         index2 =  random.randrange(0, len(self.genes))
 
-        self.genes[index1], self.genes[index2] = self.genes[index2], self.genes[index1]
+        self.genes[index2], self.genes[index1] = self.genes[index1], self.genes[index2]
+        self.cost = self.calculate_cost()
 
-        new_cost = self.set_distance()
-
-        if (new_cost > old_cost):
-            self.genes = old_combinaison
-            self.cost = old_cost
-        else:
-            self.cost = new_cost
-
-    def set_distance(self):
+    def calculate_cost(self):
         nb_genes = len(self.genes)
         distance = 0
 
-        for index in range(0, len(self.genes)):
-            villeA = cities[self.genes[index]]
+        c = cycle(self.genes)
+        next(c)
 
-            if index == nb_genes-1:
-                villeB = cities[self.genes[0]]
-            else:
-                villeB = cities[self.genes[index+1]]
+        for index1, index2 in zip(self.genes, c):
+            villeA = cities[index1]
+            villeB = cities[index2]
 
             distance += villeA.pos.distance_to(villeB.pos)
         return distance
