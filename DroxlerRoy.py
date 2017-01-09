@@ -53,6 +53,23 @@ def selection(population):
     return population
 
 def crossing(population, size):
+    start_xo_index = int(len(population[0].genes) / 2 - len(population[0].genes) / 4)
+    end_xo_index = int(len(population[0].genes) / 2 + len(population[0].genes) / 4)
+
+    nb_to_create = size - len(population)
+
+    for chromosome_index in range(0, nb_to_create):
+        chromosome_x = random.choice(population)
+        chromosome_y = random.choice(population)
+
+        new_genes_list = xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index)
+
+        # Ajout du nouveau chromosome à la population
+        population.append(Chromosome(new_genes_list))
+
+    return population
+
+def xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index):
     """ Principe global de mutation : Mutation XO.
         On selectionne deux Chromosomes x et y parmis la population.
         On détermine une section où on va insérer la section de y dans le même endroit de x.
@@ -92,46 +109,28 @@ def crossing(population, size):
             [7, 2, 0, 3, 5, 6, 1, 4, 9, 8]
 
     """
-    start_xo_index = int(len(population[0].genes) / 2 - len(population[0].genes) / 4)
-    end_xo_index = int(len(population[0].genes) / 2 + len(population[0].genes) / 4)
 
-    nb_to_create = size - len(population)
+    # Détermination des valeurs à supprimer dans x, tirées de la portion y
+    list_to_replace = chromosome_y.genes[start_xo_index:end_xo_index+1]
 
-    # Peut être fait par cycle, mais la méthode va être changée
-    for chromosome_index in range(0, nb_to_create):
-        # Choix des chromosomes, pour le moment consécutifs
-        # TODO : Changer le choix des échantillons dans la population
-        if chromosome_index < len(population):
-            chromosome_x = population[chromosome_index - len(population)]
-            chromosome_y = population[chromosome_index - len(population) + 1]
-        else:
-            chromosome_x = population[chromosome_index - len(population)]
-            chromosome_y = population[0]
+    # Remplacement de ces valeurs dans x avec des None
+    new_genes_list = [value if value not in list_to_replace else None for value in chromosome_x.genes]
 
-        # Détermination des valeurs à supprimer dans x, tirées de la portion y
-        list_to_replace = chromosome_y.genes[start_xo_index:end_xo_index+1]
+    # Comptage du nombre de None à droite de la section (pour le décalage)
+    nb_none_right = new_genes_list[end_xo_index+1:].count(None)
 
-        # Remplacement de ces valeurs dans x avec des None
-        new_genes_list = [value if value not in list_to_replace else None for value in chromosome_x.genes]
+    # Suppression des None dans la liste pour les rotations
+    new_genes_list = [value for value in new_genes_list if not value == None]
 
-        # Comptage du nombre de None à droite de la section (pour le décalage)
-        nb_none_right = new_genes_list[end_xo_index+1:].count(None)
+    # Rotation à droite des éléments
+    for _ in range(0,nb_none_right):
+        new_genes_list.insert(len(new_genes_list), new_genes_list.pop(0))
+    list_to_insert = chromosome_y.genes[start_xo_index:end_xo_index+1]
 
-        # Suppression des None dans la liste pour les rotations
-        new_genes_list = [value for value in new_genes_list if not value == None]
+    # Insertion des valeurs de y dans la section préparée
+    new_genes_list[start_xo_index:start_xo_index] = list_to_insert
 
-        # Rotation à droite des éléments
-        for _ in range(0,nb_none_right):
-            new_genes_list.insert(len(new_genes_list), new_genes_list.pop(0))
-        list_to_insert = chromosome_y.genes[start_xo_index:end_xo_index+1]
-
-        # Insertion des valeurs de y dans la section préparée
-        new_genes_list[start_xo_index:start_xo_index] = list_to_insert
-
-        # Ajout du nouveau chromosome à la population
-        population.append(Chromosome(new_genes_list))
-
-    return population
+    return new_genes_list
 
 def mutate(population):
     """Pour l'instant, la mutation est un simple swap d'indexes au hasard"""
