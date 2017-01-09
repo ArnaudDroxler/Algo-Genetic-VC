@@ -38,7 +38,7 @@ def populate(count):
         # Tant qu'il reste encore des index (attention, ils ne sont pas forcément consécutifs)
         while (len(available_indexes) > 0):
             # On tire au hasard un index entre 0 et la longueur de la chaine
-            index = random.randint(0, len(available_indexes)-1)
+            index = random.randrange(0, len(available_indexes))
             # On ajoute la valeur contenue à l'index à la séquence de villes
             indexes_list.append(available_indexes[index])
             # On retire l'index de la ville
@@ -48,9 +48,6 @@ def populate(count):
 
 def selection(population):
     population = sorted(population, key=lambda chromosome: chromosome.cost)
-    for chromo in population:
-        print(chromo)
-
     population = population[:(int)(len(population)/2)]
 
     return population
@@ -138,10 +135,10 @@ def crossing(population, size):
     return population
 
 def mutate(population):
-    """Pour l'instant, la mutation est un simple swap d'indexs au hasard"""
+    """Pour l'instant, la mutation est un simple swap d'indexes au hasard"""
     for chromosome in population:
-        index1 = random.randint(0, len(chromosome.genes)-1)
-        index2 =  random.randint(0, len(chromosome.genes)-1)
+        index1 = random.randrange(0, len(chromosome.genes))
+        index2 =  random.randrange(0, len(chromosome.genes))
         chromosome.genes[index1], chromosome.genes[index2] = chromosome.genes[index2], chromosome.genes[index1]
 
     return population
@@ -154,6 +151,7 @@ def solve(cities_list, rounds = 100, window = None):
 
     population = populate(population_size)
 
+    print("========================================")
     print("Chromosomes")
     for chromo in population:
         print(chromo)
@@ -164,18 +162,23 @@ def solve(cities_list, rounds = 100, window = None):
     print(rounds)
 
     while rounds > 0:
-        print("Selection")
+        # print("Selection")
         population = selection(population)
-        print("Affichage")
-        if window != None:
-            draw_best_path(population, window)
-        print("Croisement")
+        # print("Croisement")
         population = crossing(population, population_size)
-        print("Mutations")
-        population = mutate(population)
+        # print("Mutations")
+        # population = mutate(population)
         rounds -= 1
 
     # Ne pas oublier de mettre à jour l'affichage via l'objet window
+    print("Résultat")
+    population = sorted(population, key=lambda chromosome: chromosome.cost)
+
+    if window != None:
+        draw_best_path(population, window)
+
+    print("========================================")
+
     return True
 
 ################################################################################
@@ -246,12 +249,16 @@ def clear_window(window):
 def draw_best_path(population, window):
     clear_window(window)
 
+    print(population[0])
+
     list_points = []
     best_genes_list = population[0].genes
     for gene in best_genes_list:
         list_points.append(cities[gene].pos)
-    pygame.draw.lines(window, WHITE, False, list_points, 1)
+        print(cities[gene].pos)
 
+    list_points.append(cities[best_genes_list[0]].pos)
+    pygame.draw.lines(window, WHITE, False, list_points, 1)
 
 
 def display(cities_list = None):
@@ -283,7 +290,7 @@ def display(cities_list = None):
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
                 if over_launch:
-                    solve(cities_list, 10, window)
+                    solve(cities_list, 1, window)
                 else:
                     x_mouse, y_mouse = event.pos[0], event.pos[1]
                     # Attention : envoie une liste de tuples! La synthaxe est fine.
@@ -332,14 +339,14 @@ class Chromosome(object):
     def genes(self, value):
         print("setter called")
         self._genes = value
-        self.cost = self.set_distance
+        self.cost = self.set_distance()
 
     def set_distance(self):
         nb_genes = len(self.genes)
         distance = 0
 
         # On pourra changer pour la classe Vec2D, qui fournit des méthodes de distance
-        for index in range(0, len(self.genes)):
+        for index in range(0, len(self._genes)):
             villeA = cities[self.genes[index]]
 
             if index == nb_genes-1:
@@ -347,7 +354,10 @@ class Chromosome(object):
             else:
                 villeB = cities[self.genes[index+1]]
 
+            print(villeA.pos, " vers ", villeB.pos, " cout ", villeA.pos.distance_to(villeB.pos))
+
             distance += villeA.pos.distance_to(villeB.pos)
+        print(distance)
         return distance
 
     def __repr__(self):
