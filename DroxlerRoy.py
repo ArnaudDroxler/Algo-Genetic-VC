@@ -28,7 +28,7 @@ def populate(count):
     available_indexes = []
 
     # Pour chaque échantillon de la population à créer
-    for i in range(0,count):
+    for _ in range(0,count):
         indexes_list = []
 
         available_indexes = list(range(len(cities)))
@@ -134,7 +134,7 @@ def xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index):
 
 def mutate(population):
     """Pour l'instant, la mutation est un simple swap d'indexes au hasard"""
-    for counter in range(0, int(len(population) / 100 * mutation_rate)):
+    for _ in range(0, int(len(population) / 100 * mutation_rate)):
         chromosome = random.choice(population)
         chromosome.mutate()
 
