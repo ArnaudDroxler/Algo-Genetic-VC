@@ -1,20 +1,21 @@
 import pygame
 from pygame.locals import *
 from pygame.math import Vector2
-
-import numpy as np
-
+from itertools import cycle
 import sys, getopt
 import random
+from math import sqrt
+from time import time
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
 cities = None
-population_size = 50
-mutation_rate = 20
+population_size = 20
+mutation_rate = 40
+selection_rate = 70
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 POINTSIZE = 3
-
+maxtime = 45
 
 ################################################################################
 #  Algorithme génétique
@@ -27,9 +28,9 @@ def populate(count):
     available_indexes = []
 
     # Pour chaque échantillon de la population à créer
-    for i in range(0,count):
+    for _ in range(0,count):
         indexes_list = []
-        
+
         available_indexes = list(range(len(cities)))
 
         # On utilise ici une liste d'index afin de minimiser les appels au random
@@ -47,11 +48,28 @@ def populate(count):
 
 def selection(population):
     population = sorted(population, key=lambda chromosome: chromosome.cost)
-    population = population[:(int)(len(population)/2)]
+    population = population[:(int)(len(population)/100 * selection_rate)]
 
     return population
 
 def crossing(population, size):
+    start_xo_index = int(len(population[0].genes) / 2 - len(population[0].genes) / 4)
+    end_xo_index = int(len(population[0].genes) / 2 + len(population[0].genes) / 4)
+
+    nb_to_create = size - len(population)
+
+    for chromosome_index in range(0, nb_to_create):
+        chromosome_x = random.choice(population)
+        chromosome_y = random.choice(population)
+
+        new_genes_list = xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index)
+
+        # Ajout du nouveau chromosome à la population
+        population.append(Chromosome(new_genes_list))
+
+    return population
+
+def xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index):
     """ Principe global de mutation : Mutation XO.
         On selectionne deux Chromosomes x et y parmis la population.
         On détermine une section où on va insérer la section de y dans le même endroit de x.
@@ -91,78 +109,76 @@ def crossing(population, size):
             [7, 2, 0, 3, 5, 6, 1, 4, 9, 8]
 
     """
-    start_xo_index = int(len(population[0].genes) / 2 - len(population[0].genes) / 4)
-    end_xo_index = int(len(population[0].genes) / 2 + len(population[0].genes) / 4)
 
-    nb_to_create = size - len(population)
+    # Détermination des valeurs à supprimer dans x, tirées de la portion y
+    list_to_replace = chromosome_y.genes[start_xo_index:end_xo_index+1]
 
-    for chromosome_index in range(0, nb_to_create):
-        # Choix des chromosomes, pour le moment consécutifs
-        # TODO : Changer le choix des échantillons dans la population
-        if chromosome_index < len(population):
-            chromosome_x = population[chromosome_index - len(population)]
-            chromosome_y = population[chromosome_index - len(population) + 1]
-        else:
-            chromosome_x = population[chromosome_index - len(population)]
-            chromosome_y = population[0]
+    # Remplacement de ces valeurs dans x avec des None
+    new_genes_list = [value if value not in list_to_replace else None for value in chromosome_x.genes]
 
-        # Détermination des valeurs à supprimer dans x, tirées de la portion y
-        list_to_replace = chromosome_y.genes[start_xo_index:end_xo_index+1]
+    # Comptage du nombre de None à droite de la section (pour le décalage)
+    nb_none_right = new_genes_list[end_xo_index+1:].count(None)
 
-        # Remplacement de ces valeurs dans x avec des None
-        new_genes_list = [value if value not in list_to_replace else None for value in chromosome_x.genes]
+    # Suppression des None dans la liste pour les rotations
+    new_genes_list = [value for value in new_genes_list if not value == None]
 
-        # Comptage du nombre de None à droite de la section (pour le décalage)
-        nb_none_right = new_genes_list[end_xo_index+1:].count(None)
+    # Rotation à droite des éléments
+    for _ in range(0,nb_none_right):
+        new_genes_list.insert(len(new_genes_list), new_genes_list.pop(0))
+    list_to_insert = chromosome_y.genes[start_xo_index:end_xo_index+1]
 
-        # Suppression des None dans la liste pour les rotations
-        new_genes_list = [value for value in new_genes_list if not value == None]
+    # Insertion des valeurs de y dans la section préparée
+    new_genes_list[start_xo_index:start_xo_index] = list_to_insert
 
-        # Rotation à droite des éléments
-        for counter in range(0,nb_none_right):
-            new_genes_list.insert(len(new_genes_list), new_genes_list.pop(0))
-        list_to_insert = chromosome_y.genes[start_xo_index:end_xo_index+1]
-
-        # Insertion des valeurs de y dans la section préparée
-        new_genes_list[start_xo_index:start_xo_index] = list_to_insert
-
-        # Ajout du nouveau chromosome à la population
-        population.append(Chromosome(new_genes_list))
-
-    return population
+    return new_genes_list
 
 def mutate(population):
     """Pour l'instant, la mutation est un simple swap d'indexes au hasard"""
-    for counter in range(0, int(len(population) / 100 * mutation_rate)):
+    for _ in range(0, int(len(population) / 100 * mutation_rate)):
         chromosome = random.choice(population)
-        chromosome.mutate()
+        population.append(chromosome.mutate())
 
     return population
 
-def solve(cities_list, rounds = 100, window = None):
+def solve(cities_list, window = None, maxtime = 0, gui = False):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
     global cities
     global population_size
+    global mutation_rate
     cities = tuple(cities_list)
+    time_left = maxtime
 
     population = populate(population_size)
+    augmentation_up = False
 
-    print("========================================")
-    print("Chromosomes initiaux")
-    for chromo in population:
-        print(chromo)
-
-    while rounds > 0:
+    # print("========================================")
+    # print("Chromosomes initiaux")
+    # for chromo in population:
+    #     print(chromo)
+    while time_left > 0:
+        time1 = time()
         population = selection(population)
         population = crossing(population, population_size)
         population = mutate(population)
-        rounds -= 1
+
+        if gui:
+            draw_best_path(population, window)
+        time2 = time()
+        elapsedtime = time2 - time1
+
+        if time_left < maxtime/2 and not augmentation_up:
+            mutation_rate += 20
+            augmentation_up = True
+
+
+        time_left -= elapsedtime
 
     # Ne pas oublier de mettre à jour l'affichage via l'objet window
     print("Résultat")
     population = sorted(population, key=lambda chromosome: chromosome.cost)
-    for chromo in population:
-        print(chromo)
+    # for chromo in population:
+    #     print(chromo)
+    print(population[0])
 
     if window != None:
         draw_best_path(population, window)
@@ -199,8 +215,8 @@ def main(argv):
     optlist, args = getopt.getopt(argv, '' ,['nogui', 'maxtime=','help'])
 
     file = None
-    gui = True
-    maxtime = 1000
+    gui = False
+    maxtime = 5
 
     if len(args) == 1:
         file = args[0]
@@ -239,8 +255,6 @@ def clear_window(window):
 def draw_best_path(population, window):
     clear_window(window)
 
-    print(population[0])
-
     list_points = []
     best_genes_list = population[0].genes
     for gene in best_genes_list:
@@ -248,10 +262,13 @@ def draw_best_path(population, window):
 
     list_points.append(cities[best_genes_list[0]].pos)
     pygame.draw.lines(window, WHITE, False, list_points, 1)
+    pygame.display.update()
 
 
 def display(cities_list = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
+    gui = True
+    global maxtime
 
     window = pygame.display.set_mode((500, 500))
 
@@ -279,7 +296,7 @@ def display(cities_list = None):
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
                 if over_launch:
-                    solve(cities_list, 20, window)
+                    solve(cities_list, window, maxtime, gui)
                 else:
                     x_mouse, y_mouse = event.pos[0], event.pos[1]
                     # Attention : envoie une liste de tuples! La synthaxe est fine.
@@ -318,40 +335,51 @@ class Chromosome(object):
         self.genes = genes
         self.cost = 0
         if not self.genes == None:
-            self.cost = self.set_distance()
+            self.cost = self.calculate_cost()
 
     def mutate(self):
         """Mutation du chromosome simple en inversant deux indexes au hasard.
-           On ne garde la mutation que si elle est meilleure"""
-        old_combinaison = list(self.genes)
-        old_cost = self.cost
+           On ne garde la mutation que si elle est meilleure. Il se trouve
+           que l'on pourrait imaginer qu'inverser deux villes connexes pourrait
+           améliorer le résultat mais ca ne semble pas être le cas."""
+        new_genes_list = list(self.genes)
 
-        index1 = random.randrange(0, len(self.genes))
-        index2 =  random.randrange(0, len(self.genes))
+        # for _ in range(0,1):
+        #     index1 = random.randrange(0, len(self.genes))
+        #     index2 =  random.randrange(0, len(self.genes))
+        #
+        #     new_genes_list[index2], new_genes_list[index1] = new_genes_list[index1], new_genes_list[index2]
 
-        self.genes[index1], self.genes[index2] = self.genes[index2], self.genes[index1]
+        for _ in range(0,2):
+            start_index = random.randrange(0, len(self.genes))
+            end_index = random.randrange(0, len(self.genes))
 
-        new_cost = self.set_distance()
+            if end_index < start_index:
+                start_index, end_index = end_index, start_index
 
-        if (new_cost > old_cost):
-            self.genes = old_combinaison
-            self.cost = old_cost
-        else:
-            self.cost = new_cost
+            part_to_reverse = new_genes_list[start_index:end_index]
+            part_to_reverse.reverse()
 
-    def set_distance(self):
+            new_genes_list[start_index:end_index] = part_to_reverse
+
+        return Chromosome(new_genes_list)
+
+    def calculate_cost(self):
         nb_genes = len(self.genes)
         distance = 0
 
-        for index in range(0, len(self.genes)):
-            villeA = cities[self.genes[index]]
+        c = cycle(self.genes)
+        next(c)
 
-            if index == nb_genes-1:
-                villeB = cities[self.genes[0]]
-            else:
-                villeB = cities[self.genes[index+1]]
+        for index1, index2 in zip(self.genes, c):
+            villeA = cities[index1]
+            villeB = cities[index2]
+
+            dx = abs(villeA.pos.x - villeB.pos.x)
+            dy = abs(villeA.pos.y - villeB.pos.y)
 
             distance += villeA.pos.distance_to(villeB.pos)
+            # distance += sqrt(dx**2 + dy**2)
         return distance
 
     def __repr__(self):
@@ -361,6 +389,7 @@ class Chromosome(object):
 ################################################################################
 #  Fin Classes
 ################################################################################
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])
