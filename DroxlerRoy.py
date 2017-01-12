@@ -193,7 +193,7 @@ def solve(cities_list, window = None, maxtime = 60, gui = False):
 ################################################################################
 
 def ga_solve(file = None, gui=True, maxtime=60):
-    parametre(file,gui,maxtime)
+     return parametre(file,gui,maxtime)
 
 def parametre(file = None, gui=True, maxtime=60):
     window = None
