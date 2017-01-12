@@ -2,20 +2,20 @@ import pygame
 from pygame.locals import *
 from pygame.math import Vector2
 from itertools import cycle
-import numpy as np
-
 import sys, getopt
 import random
+from math import sqrt
+from time import time
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
 cities = None
 population_size = 20
-mutation_rate = 35
-selection_rate = 50
-rounds = 1000
+mutation_rate = 40
+selection_rate = 70
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 POINTSIZE = 3
+maxtime = 45
 
 ################################################################################
 #  Algorithme génétique
@@ -140,30 +140,45 @@ def mutate(population):
 
     return population
 
-def solve(cities_list, rounds = 50, window = None, maxtime = 0):
+def solve(cities_list, window = None, maxtime = 0, gui = False):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
     global cities
     global population_size
+    global mutation_rate
     cities = tuple(cities_list)
+    time_left = maxtime
 
     population = populate(population_size)
+    augmentation_up = False
 
-    print("========================================")
-    print("Chromosomes initiaux")
-    for chromo in population:
-        print(chromo)
-
-    while rounds > 0:
+    # print("========================================")
+    # print("Chromosomes initiaux")
+    # for chromo in population:
+    #     print(chromo)
+    while time_left > 0:
+        time1 = time()
         population = selection(population)
         population = crossing(population, population_size)
         population = mutate(population)
-        rounds -= 1
+
+        if gui:
+            draw_best_path(population, window)
+        time2 = time()
+        elapsedtime = time2 - time1
+
+        if time_left < maxtime/2 and not augmentation_up:
+            mutation_rate += 20
+            augmentation_up = True
+
+
+        time_left -= elapsedtime
 
     # Ne pas oublier de mettre à jour l'affichage via l'objet window
     print("Résultat")
     population = sorted(population, key=lambda chromosome: chromosome.cost)
-    for chromo in population:
-        print(chromo)
+    # for chromo in population:
+    #     print(chromo)
+    print(population[0])
 
     if window != None:
         draw_best_path(population, window)
@@ -200,8 +215,8 @@ def main(argv):
     optlist, args = getopt.getopt(argv, '' ,['nogui', 'maxtime=','help'])
 
     file = None
-    gui = True
-    maxtime = 1000
+    gui = False
+    maxtime = 5
 
     if len(args) == 1:
         file = args[0]
@@ -247,11 +262,13 @@ def draw_best_path(population, window):
 
     list_points.append(cities[best_genes_list[0]].pos)
     pygame.draw.lines(window, WHITE, False, list_points, 1)
+    pygame.display.update()
 
 
 def display(cities_list = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
-    global rounds
+    gui = True
+    global maxtime
 
     window = pygame.display.set_mode((500, 500))
 
@@ -279,7 +296,7 @@ def display(cities_list = None):
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
                 if over_launch:
-                    solve(cities_list, rounds, window)
+                    solve(cities_list, window, maxtime, gui)
                 else:
                     x_mouse, y_mouse = event.pos[0], event.pos[1]
                     # Attention : envoie une liste de tuples! La synthaxe est fine.
@@ -327,13 +344,13 @@ class Chromosome(object):
            améliorer le résultat mais ca ne semble pas être le cas."""
         new_genes_list = list(self.genes)
 
-        for _ in range(0,1):
-            index1 = random.randrange(0, len(self.genes))
-            index2 =  random.randrange(0, len(self.genes))
+        # for _ in range(0,1):
+        #     index1 = random.randrange(0, len(self.genes))
+        #     index2 =  random.randrange(0, len(self.genes))
+        #
+        #     new_genes_list[index2], new_genes_list[index1] = new_genes_list[index1], new_genes_list[index2]
 
-            new_genes_list[index2], new_genes_list[index1] = new_genes_list[index1], new_genes_list[index2]
-
-        for _ in range(0,1):
+        for _ in range(0,2):
             start_index = random.randrange(0, len(self.genes))
             end_index = random.randrange(0, len(self.genes))
 
@@ -358,7 +375,11 @@ class Chromosome(object):
             villeA = cities[index1]
             villeB = cities[index2]
 
+            dx = abs(villeA.pos.x - villeB.pos.x)
+            dy = abs(villeA.pos.y - villeB.pos.y)
+
             distance += villeA.pos.distance_to(villeB.pos)
+            # distance += sqrt(dx**2 + dy**2)
         return distance
 
     def __repr__(self):
