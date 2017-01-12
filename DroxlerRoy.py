@@ -15,7 +15,8 @@ selection_rate = 70
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 POINTSIZE = 3
-maxtime = 45
+
+
 
 ################################################################################
 #  Algorithme génétique
@@ -140,7 +141,7 @@ def mutate(population):
 
     return population
 
-def solve(cities_list, window = None, maxtime = 0, gui = False):
+def solve(cities_list, window = None, maxtime = 60, gui = False):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
     global cities
     global population_size
@@ -191,9 +192,29 @@ def solve(cities_list, window = None, maxtime = 0, gui = False):
 #  Fin Algorithme génétique
 ################################################################################
 
-def ga_solve(file = None, gui=True, maxtime=0):
-    return true
+def ga_solve(file = None, gui=True, maxtime=60):
+    parametre(file,gui,maxtime)
 
+def parametre(file = None, gui=True, maxtime=60):
+    window = None
+    cities_list = None
+    
+    if(file):
+        cities_list = []
+        with open(file, "r") as fichier :
+            for line in fichier :
+                data = line.split()
+                cities_list.append(City((int(data[1]),int(data[2]))))
+    if(gui):
+        window = pygame.display.set_mode((500, 500))
+    
+    if (gui and not file):
+        display(cities_list, maxtime,gui,window)
+    elif(not gui and file):
+        solve(cities_list, window, maxtime, gui)
+    elif(gui and file):
+        display(cities_list,maxtime,gui,window)
+    
 def main(argv):
     """
         NAME
@@ -215,32 +236,23 @@ def main(argv):
     optlist, args = getopt.getopt(argv, '' ,['nogui', 'maxtime=','help'])
 
     file = None
-    gui = False
-    maxtime = 5
-
+    gui = True
+    maxtime = 60
+   
     if len(args) == 1:
         file = args[0]
 
     for o,a in optlist :
         if o == "--maxtime":
-            maxtime = a
+            maxtime = int(a)
         if o == "--nogui":
             gui = False
         if o == "--help":
              print(main.__doc__)
              sys.exit()
-
-    cities_list = []
-
-    if (gui):
-        display()
-    else:
-         with open(file, "r") as fichier :
-            for line in fichier :
-                data = line.split()
-                cities_list.append(City((int(data[1]),int(data[2]))))
-    display(cities_list)
-
+             
+    parametre(file,gui,maxtime)
+    
 ################################################################################
 #  Affichage
 ################################################################################
@@ -265,13 +277,9 @@ def draw_best_path(population, window):
     pygame.display.update()
 
 
-def display(cities_list = None):
+def display(cities_list = None, maxtime = 60,gui = True,window = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
-    gui = True
-    global maxtime
-
-    window = pygame.display.set_mode((500, 500))
-
+    
     if cities_list == None:
         cities_list = []
     else:
