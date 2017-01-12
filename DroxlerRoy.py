@@ -10,9 +10,9 @@ import random
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
 cities = None
 population_size = 20
-mutation_rate = 20
-selection_rate = 20
-rounds = 100
+mutation_rate = 35
+selection_rate = 50
+rounds = 1000
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 POINTSIZE = 3
@@ -136,7 +136,7 @@ def mutate(population):
     """Pour l'instant, la mutation est un simple swap d'indexes au hasard"""
     for _ in range(0, int(len(population) / 100 * mutation_rate)):
         chromosome = random.choice(population)
-        chromosome.mutate()
+        population.append(chromosome.mutate())
 
     return population
 
@@ -325,12 +325,27 @@ class Chromosome(object):
            On ne garde la mutation que si elle est meilleure. Il se trouve
            que l'on pourrait imaginer qu'inverser deux villes connexes pourrait
            améliorer le résultat mais ca ne semble pas être le cas."""
+        new_genes_list = list(self.genes)
 
-        index1 = random.randrange(0, len(self.genes))
-        index2 =  random.randrange(0, len(self.genes))
+        for _ in range(0,1):
+            index1 = random.randrange(0, len(self.genes))
+            index2 =  random.randrange(0, len(self.genes))
 
-        self.genes[index2], self.genes[index1] = self.genes[index1], self.genes[index2]
-        self.cost = self.calculate_cost()
+            new_genes_list[index2], new_genes_list[index1] = new_genes_list[index1], new_genes_list[index2]
+
+        for _ in range(0,1):
+            start_index = random.randrange(0, len(self.genes))
+            end_index = random.randrange(0, len(self.genes))
+
+            if end_index < start_index:
+                start_index, end_index = end_index, start_index
+
+            part_to_reverse = new_genes_list[start_index:end_index]
+            part_to_reverse.reverse()
+
+            new_genes_list[start_index:end_index] = part_to_reverse
+
+        return Chromosome(new_genes_list)
 
     def calculate_cost(self):
         nb_genes = len(self.genes)
@@ -353,6 +368,7 @@ class Chromosome(object):
 ################################################################################
 #  Fin Classes
 ################################################################################
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])
