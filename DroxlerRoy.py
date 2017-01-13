@@ -186,7 +186,7 @@ def solve(cities_list, window = None, maxtime = 60, gui = False):
 
     print("========================================")
 
-    return True
+    return population
 
 ################################################################################
 #  Fin Algorithme génétique
@@ -209,11 +209,13 @@ def parametre(file = None, gui=True, maxtime=60):
         window = pygame.display.set_mode((500, 500))
     
     if (gui and not file):
-        display(cities_list, maxtime,gui,window)
+        maxtime = 10
+        return display(cities_list, maxtime,gui,window)
     elif(not gui and file):
-        solve(cities_list, window, maxtime, gui)
+        return solve(cities_list, window, maxtime, gui)
     elif(gui and file):
-        display(cities_list,maxtime,gui,window)
+        return display(cities_list,maxtime,gui,window)
+    
     
 def main(argv):
     """
@@ -304,7 +306,7 @@ def display(cities_list = None, maxtime = 60,gui = True,window = None):
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
                 if over_launch:
-                    solve(cities_list, window, maxtime, gui)
+                    return solve(cities_list, window, maxtime, gui)
                 else:
                     x_mouse, y_mouse = event.pos[0], event.pos[1]
                     # Attention : envoie une liste de tuples! La synthaxe est fine.
@@ -312,6 +314,7 @@ def display(cities_list = None, maxtime = 60,gui = True,window = None):
                     pygame.draw.rect(window, WHITE, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
 
         pygame.display.update()
+
 
 ################################################################################
 #  Classes
