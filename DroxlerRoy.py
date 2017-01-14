@@ -6,17 +6,19 @@ import sys, getopt
 import random
 from math import sqrt
 from time import time
+from math import hypot
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
 cities = None
 population_size = 20
-mutation_rate = 40
-selection_rate = 70
+mutation_rate = 35
+selection_rate = 60
 WHITE = (255,255,255)
 BLACK = (0,0,0)
-POINTSIZE = 3
-
-
+POINTSIZE = 5
+# Temps que l'on laisse à disposition pour retourner la solution. Avec 0.05s on est très très large, cela prend en général 0.005s
+TIMELIMIT = 0.1
+starting_time = 0
 
 ################################################################################
 #  Algorithme génétique
@@ -141,13 +143,20 @@ def mutate(population):
 
     return population
 
-def solve(cities_list, window = None, maxtime = 60, gui = False):
+def solve(cities_list, window = None, maxtime = 20, gui = False):
     #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
     global cities
-    global population_size
-    global mutation_rate
+    global starting_time
+    global TIMELIMIT
+    population_size = 20
+    mutation_rate = 35
+    second_mutation_rate = mutation_rate + 10
+    selection_rate = 60
+
+
+    time_error_rate = 0.2
+
     cities = tuple(cities_list)
-    time_left = maxtime
 
     population = populate(population_size)
     augmentation_up = False
@@ -156,7 +165,12 @@ def solve(cities_list, window = None, maxtime = 60, gui = False):
     # print("Chromosomes initiaux")
     # for chromo in population:
     #     print(chromo)
-    while time_left > 0:
+    elapsed_time = time() - starting_time
+    time_left = maxtime - elapsed_time
+    time_left -= time_left * time_error_rate
+    print("Time left", time_left)
+
+    while time_left > TIMELIMIT:
         time1 = time()
         population = selection(population)
         population = crossing(population, population_size)
@@ -165,58 +179,58 @@ def solve(cities_list, window = None, maxtime = 60, gui = False):
         if gui:
             draw_best_path(population, window)
         time2 = time()
-        elapsedtime = time2 - time1
+        elapsed_time = time2 - time1
 
-        if time_left < maxtime/2 and not augmentation_up:
-            mutation_rate += 20
+        if time_left < maxtime/4 and not augmentation_up:
+            mutation_rate = second_mutation_rate
             augmentation_up = True
 
+        time_left -= elapsed_time
 
-        time_left -= elapsedtime
-
-    # Ne pas oublier de mettre à jour l'affichage via l'objet window
-    print("Résultat")
     population = sorted(population, key=lambda chromosome: chromosome.cost)
-    # for chromo in population:
-    #     print(chromo)
-    print(population[0])
+    best_solution = population[0]
+    best_cost = best_solution.cost
+    best_path = [cities_list[city].name for city in best_solution.genes]
 
     if window != None:
         draw_best_path(population, window)
 
-    print("========================================")
+    print("Meilleur cout", best_cost )
 
-    return population
+    return best_cost, best_path
 
 ################################################################################
 #  Fin Algorithme génétique
 ################################################################################
 
-def ga_solve(file = None, gui=True, maxtime=60):
+def ga_solve(file = None, gui=False, maxtime=10):
      return parametre(file,gui,maxtime)
 
-def parametre(file = None, gui=True, maxtime=60):
+def parametre(file = None, gui=True, maxtime=10):
     window = None
     cities_list = None
-    
+    global starting_time
+    starting_time = time()
+
     if(file):
         cities_list = []
         with open(file, "r") as fichier :
             for line in fichier :
                 data = line.split()
-                cities_list.append(City((int(data[1]),int(data[2]))))
+                cities_list.append(City((int(data[1]),int(data[2])), data[0]))
     if(gui):
         window = pygame.display.set_mode((500, 500))
-    
+
     if (gui and not file):
         maxtime = 10
         return display(cities_list, maxtime,gui,window)
     elif(not gui and file):
+        print()
         return solve(cities_list, window, maxtime, gui)
     elif(gui and file):
         return display(cities_list,maxtime,gui,window)
-    
-    
+
+
 def main(argv):
     """
         NAME
@@ -240,7 +254,7 @@ def main(argv):
     file = None
     gui = True
     maxtime = 60
-   
+
     if len(args) == 1:
         file = args[0]
 
@@ -252,16 +266,15 @@ def main(argv):
         if o == "--help":
              print(main.__doc__)
              sys.exit()
-             
+
     parametre(file,gui,maxtime)
-    
+
 ################################################################################
 #  Affichage
 ################################################################################
 
 def clear_window(window):
     window.fill(BLACK)
-    pygame.draw.rect(window, WHITE, [0, 0, 50, 20], 2)
 
     for point in cities:
         pygame.draw.rect(window, WHITE, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
@@ -279,23 +292,19 @@ def draw_best_path(population, window):
     pygame.display.update()
 
 
-def display(cities_list = None, maxtime = 60,gui = True,window = None):
+def display(cities_list = None, maxtime = 10,gui = True,window = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
-    
+
     if cities_list == None:
         cities_list = []
     else:
         for point in cities_list:
             pygame.draw.rect(window, WHITE, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
 
-    # Draw a rectangle outline
-    lauch_button = pygame.draw.rect(window, WHITE, [0, 0, 50, 20], 2)
-
     continued = True
 
     while continued:
         mouse_xy = pygame.mouse.get_pos()
-        over_launch = lauch_button.collidepoint(mouse_xy)
 
         for event in pygame.event.get():
             # On est obligé de faire en deux lignes car les événements parcourus peuvent retourner false.
@@ -303,15 +312,15 @@ def display(cities_list = None, maxtime = 60,gui = True,window = None):
             if (event.type == KEYDOWN and event.key == K_ESCAPE) or (event.type == QUIT):
                 continued = False
 
+            if (event.type == KEYDOWN and event.key == K_RETURN):
+                return solve(cities_list, window, maxtime, gui)
+
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
-                if over_launch:
-                    return solve(cities_list, window, maxtime, gui)
-                else:
-                    x_mouse, y_mouse = event.pos[0], event.pos[1]
-                    # Attention : envoie une liste de tuples! La synthaxe est fine.
-                    cities_list.append(City(pos=(x_mouse, y_mouse)))
-                    pygame.draw.rect(window, WHITE, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
+                x_mouse, y_mouse = event.pos[0], event.pos[1]
+                # Attention : envoie une liste de tuples! La synthaxe est fine.
+                cities_list.append(City(pos=(x_mouse, y_mouse)))
+                pygame.draw.rect(window, WHITE, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
 
         pygame.display.update()
 
@@ -336,7 +345,7 @@ class City(object):
         City.last_id = City.last_id + 1
 
     def __repr__(self):
-        return "[id:" + str(self.id) + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
+        return "[id:" + str(self.id) + " name : "+ self.name + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
 
 class Chromosome(object):
     """ représentation d'un individu sous la forme d'un chemin (suite de villes)
@@ -389,7 +398,9 @@ class Chromosome(object):
             dx = abs(villeA.pos.x - villeB.pos.x)
             dy = abs(villeA.pos.y - villeB.pos.y)
 
-            distance += villeA.pos.distance_to(villeB.pos)
+            distance += hypot(dx,dy)
+
+            # distance += villeA.pos.distance_to(villeB.pos)
             # distance += sqrt(dx**2 + dy**2)
         return distance
 

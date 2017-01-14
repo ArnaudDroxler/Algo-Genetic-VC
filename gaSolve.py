@@ -3,14 +3,14 @@
 import DroxlerRoy
 
 def main():
-    file = "data/pb020.txt"
+    file = "data/pb050.txt"
     gui = False
-    maxtime = 5
-   
+    maxtime = 30
+
     result = DroxlerRoy.ga_solve(file,gui,maxtime)
-    
-    print(result[0])
-   
+
+    print(result)
+
 
 if __name__ == '__main__':
     main()
