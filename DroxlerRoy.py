@@ -4,30 +4,98 @@
     But                          : Implémentation d'un algorithme génétique pour résoudre
                                    le problème du voyageur de commerce
 
-    Informations globales à propos de l'algorithme génétique
+    Informations à propos des choix pour l'algorithme génétique
 
-    L'algorithme génétique utilise les trois phases habituelles d'un algorithme génétique, soit
-    la sélection, le croisement puis les mutations.
+    ***********************************************************************************
+                          Orientation globale de l'algorithme
+    ***********************************************************************************
+
+    L'algorithme génétique utilise les trois phases habituelles d'un algorithme génétique,
+    soit la sélection, le croisement puis les mutations.
+
+    De manière générale, il y a deux aspects que l'on peut rechercher de l'algorithme :
+    * La vitesse de convergence
+    * La robustesse et la constance des résultats (ne pas bloquer sur un minimum local)
+
+    Nous avons volontairement donné la priorité à la résistance de l'algorithme en
+    implémentant des méthodes qui génèrent beaucoup de bruit sur les gênes des chromosomes
+    de la population.
+
+    ***********************************************************************************
+                                        Population
+    ***********************************************************************************
+
+    Aucune méthode gourmande n'a été utilisée pour essayer de générer une solution bonne
+    dès le départ. On aurait par exemple pu essayer de partir d'un point et de chercher
+    toujours la ville la plus proche.
+
+    Nous avons préféré opter pour une génération de la population totalement aléatoire.
+
+    ***********************************************************************************
+                                        Selection
+    ***********************************************************************************
 
     Nous avons choisi de privilégier une selection élitiste, très simple et très rapide
     implémentée par une simple list comprehension.
 
-    Ce choix se combine avec un croisement en deux points, avec réarrangement via la
-    méthode du croisement ox.
+    ***********************************************************************************
+                                        Croisements
+    ***********************************************************************************
 
-    Pour les mutations, on selectionne au hasard des chromosome qui vont générer une mutation.
-    Le chromosome selectionné n'est jamais remplacé, on génère un nouveau chromosome, sans se soucier
-    de son efficacité. C'est la prochaine phase de selection qui va le garder ou non.
+    Nous avons utilisé un croisement en deux points, avec réarrangement via la
+    méthode du croisement ox. Cette méthode est relativement gourmande, mais génère des
+    résultats très pertinents.
 
-    Globabelement, on peut constater que les choix effectués dans les méthodes de selection,
+    Un soin tout particulier a été accordé à l'algorithme, en partant des explications
+    de la documentation fournie avec ce travail pratique, en décorticant les étapes et
+    en trouvant une méthode d'implémentation rapide via des rotations. Elle est
+    précisément décrite dans la méthode ox_cross.
+
+    ***********************************************************************************
+                                        Mutations
+    ***********************************************************************************
+
+    Pour les mutations, on selectionne au hasard des chromosome qui vont générer
+    une mutation. Le chromosome selectionné n'est jamais remplacé, on génère un nouveau
+    chromosome, sans se soucier de son efficacité. C'est la prochaine phase de selection
+    qui va le garder ou non.
+
+
+    ***********************************************************************************
+                                        Tests
+    ***********************************************************************************
+
+    Le programme a été fait pour que les paramètres pour l'algorithme soient facilement
+    modifiables. Des tests ont été effectués pour paramétrer au mieux ces facteurs, en
+    lancant n fois l'expérience et en récupérant les résultats moyens.
+
+    Il en sort qu'il n'est pas utile d'utiliser de grandes populations pour aboutir à
+    de bons résultats, cela a plutôt tendance à faire baisser les performances.
+
+    Etant donné l'implémentation des mutations (qui retournent un nouveau chromosome),
+    il est utile de mettre un taux de mutation plus élevé que les 30% que l'on retrouve
+    dans la documentation scientifique du domaine.
+
+    Les paramètres ne sont pas encore totalement optimisés par manque de temps.
+
+    L'utilisation en tant que module a été testée avec le PVC-tester-3.5, et il n'a
+    pas fourni d'erreur. On pourrait tenter de réduire la constante TIMELIMIT qui fixe
+    le temps qu'il faut laisser pour l'aggrégation des résultat et le retour des
+    méthodes, mais on risque de fournir des timeout pour le testeur.
+
+    ***********************************************************************************
+                                        Conclusions
+    ***********************************************************************************
+
+    Globalement, on peut constater que les choix effectués dans les méthodes de selection,
     croisements et mutations permettent d'explorer largement le domaine des solutions,
     mais que les performances en terme de convergence sont affectés. Ceci est volontaire,
     et les résultats pour un nombre de villes conséquents avec un temps court fourni des
     résultats tout de même très satisfaisants.
 
     On peut voir en mode graphique qu'en laissant suffisamment de temps, on arrive rarement
-    à une solution qui présente des croisements de routes, l'algorithme réussi à démeler fortement
-    les noeuds.
+    à une solution qui présente des croisements de routes, l'algorithme réussi à démeler
+    fortement les noeuds.
 
     Nous avons implémenté une augmentation du nombre de mutations en fin de temps à disposition
     pour faire en sorte qu'il ne reste pas bloqué dans un minimum local, et il est visuellement
@@ -37,7 +105,49 @@
     et trouve un nouveau chemin très différent, qui comporte des croisements de chemins,
     le fait muter et le dénoue.
 
-    Pour plus d'informations, veuillez lire le README.
+    Les avantages de cette implémentation sont les suivants :
+    * Etant donné que l'on repose entièrement sur l'aléatoire, on ne dirige pas
+      les résultats dans un minimum local.
+    * L'algorithme a la capacité de sortir des minimums locaux.
+    * Il est robuste et optimisé pour les phases critiques qui demandent beaucoup
+      de calculs
+
+    Les inconvénients sont les suivants :
+    * Il pourrait converger plus rapidement vers une solution acceptable.
+    * Il n'implémente pas de notion de convergence pour stopper la recherche.
+
+      Il est possible de le faire facilement en comparant à chaque boucle l'ancien
+      meilleur résultat avec le nouveau, et de faire en sorte que si c'est le cas
+      x fois, on stop la recherche. Ce critère n'est pas très pertinent tout de même.
+
+      L'idéal serait de comparer la distance moyenne entre les échantillons de
+      la population, et de faire en sorte que si il sont tous très semblables on
+      peut dire qu'il n'est pas utile de faire plus.
+
+      La première n'a pas été implémentée car elle ne paraît pas apporter grand chose,
+      hormis allourdir la procédure.
+
+      La deuxième est beaucoup plus intéressant mais allourdi énormément la boucle
+      principale de l'algorithme.
+
+    ***********************************************************************************
+                              Améliorations et perspectives
+    ***********************************************************************************
+
+    L'algorithme peut être amélioré pour ce qui est de la vitesse de convergence,
+    ceci en générant une population plus dirigée, puis en changeant la selection
+    élitiste par une autre méthode (la méthode par tournoi semble une bonne option).
+
+    On pourrait imaginer lancer plusieurs expériences en parralèlle et récupérer
+    le meilleur résultat parmis celles-ci.
+
+    En terme de programmation, l'utilisation d'une heapq semble être une bonne
+    option, mais il faut vérifier qu'elle apporte vraiment plus qu'elle ne coûte,
+    car les tris sont effectués à un seul moment actuellement, tandis qu'une heapq
+    trie à chaque ajout/suppression.
+
+    Un profilage montre que l'estimation du coût, le tri des listes et le croisement
+    sont les sections critiques de l'algorithme.
 
 """
 
@@ -52,18 +162,18 @@ from time import time
 from math import hypot
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
+# Il est global pour éviter de le passer à chaque méthode, ce qui impacte
+# légèrement les performances
 cities = None
 # Nombre de chromosomes formant la population
 population_size = 20
 # Pourcentage de la population qui va subir une mutation
-mutation_rate = 30
+mutation_rate = 50
 # Pourcentage des chromosomes gardés lors de la phase de selection
 selection_rate = 60
 
-
 # Sert à l'enregistrement du temps lors de l'appel comme module
 starting_time = 0
-
 
 # Constantes pour PyGame
 WHITE = (255,255,255)
@@ -72,7 +182,7 @@ BLACK = (0,0,0)
 # Taille des points pour représenter les villes
 POINTSIZE = 2
 # Temps que l'on laisse à disposition pour retourner la solution. Avec 0.05s on est très très large, cela prend en général 0.005s
-TIMELIMIT = 0.1
+TIMELIMIT = 0.05
 # Temps laissé à l'Algorithme par défaut si aucun paramètre n'est passé.
 DEFAULTMAXTIME = 20
 
@@ -208,10 +318,10 @@ def ox_cross(chromosome_x, chromosome_y, start_ox_index, end_ox_index):
     return new_genes_list
 
 def mutate(population):
-    """Mutation appliquée sur la population. Les échantillons qui subissent une mutation
-       Sont choisis totalement au hasard. On fait muter un certain taux de la population.
-       Très important, les mutations crées de nouveaux échantillons pour la population,
-       on ne perd pas les chromosomes de base.
+    """ Mutation appliquée sur la population. Les échantillons qui subissent une mutation
+        Sont choisis totalement au hasard. On fait muter un certain taux de la population.
+        Très important, les mutations crées de nouveaux échantillons pour la population,
+        on ne perd pas les chromosomes de base.
     """
     for _ in range(0, int(len(population) / 100 * mutation_rate)):
         chromosome = random.choice(population)
@@ -225,7 +335,8 @@ def solve(cities_list, window = None, maxtime = DEFAULTMAXTIME, gui = False):
         Les autres paramètres sont facultatifs :
         window est l'instance de la fenêtre PyGame.
         maxtime est le temps total de calcul désiré, en seconde.
-        gui détermine si on désire le rendu graphique en temps réel"""
+        gui détermine si on désire le rendu graphique en temps réel
+    """
     global cities
     global starting_time
     global TIMELIMIT
