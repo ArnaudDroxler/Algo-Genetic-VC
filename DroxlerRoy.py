@@ -114,18 +114,15 @@
 
     Les inconvénients sont les suivants :
     * Il pourrait converger plus rapidement vers une solution acceptable.
-    * Il n'implémente pas de notion de convergence pour stopper la recherche.
+    * Il n'implémente pas de notion de convergence de manière très poussée pour stopper la recherche.
 
       Il est possible de le faire facilement en comparant à chaque boucle l'ancien
       meilleur résultat avec le nouveau, et de faire en sorte que si c'est le cas
-      x fois, on stop la recherche. Ce critère n'est pas très pertinent tout de même.
+      x fois, on stop la recherche.
 
       L'idéal serait de comparer la distance moyenne entre les échantillons de
       la population, et de faire en sorte que si il sont tous très semblables on
       peut dire qu'il n'est pas utile de faire plus.
-
-      La première n'a pas été implémentée car elle ne paraît pas apporter grand chose,
-      hormis allourdir la procédure.
 
       La deuxième est beaucoup plus intéressant mais allourdi énormément la boucle
       principale de l'algorithme.
@@ -149,6 +146,10 @@
     Un profilage montre que l'estimation du coût, le tri des listes et le croisement
     sont les sections critiques de l'algorithme.
 
+    Il serait intéressant de proposer des mutations qui résultent en plus de désordre,
+    par exemple en mêlant l'inversion d'une portion aléatoire, et y ajouter n échanges
+    aléatoires de villes.
+
 """
 
 import pygame
@@ -168,7 +169,7 @@ cities = None
 # Nombre de chromosomes formant la population
 population_size = 20
 # Pourcentage de la population qui va subir une mutation
-mutation_rate = 50
+mutation_rate = 40
 # Pourcentage des chromosomes gardés lors de la phase de selection
 selection_rate = 60
 
@@ -177,14 +178,19 @@ starting_time = 0
 
 # Constantes pour PyGame
 WHITE = (255,255,255)
+RED = (255,0,0)
 BLACK = (0,0,0)
 
 # Taille des points pour représenter les villes
-POINTSIZE = 2
+POINTSIZE = 5
 # Temps que l'on laisse à disposition pour retourner la solution. Avec 0.05s on est très très large, cela prend en général 0.005s
 TIMELIMIT = 0.05
 # Temps laissé à l'Algorithme par défaut si aucun paramètre n'est passé.
 DEFAULTMAXTIME = 20
+
+# Nombre d'itérations qui lorsqu'elles aboutissent au même résultat coupe la recherche
+# Il est volontairement très élevé car l'algorithme génère beaucoup de bruit via son aléatoire
+MAXSAMESOLUTIONNUMBER = 5000
 
 ################################################################################
 #  Algorithme génétique
@@ -351,6 +357,9 @@ def solve(cities_list, window = None, maxtime = DEFAULTMAXTIME, gui = False):
     # Il est très grand pour ne pas prendre de risque pour l'évaluation via PVC-tester
     time_error_rate = 0.02
 
+    stagnation = 0
+    old_best_cost = 0
+
     if gui:
         font = pygame.font.Font(None, 30)
 
@@ -366,9 +375,19 @@ def solve(cities_list, window = None, maxtime = DEFAULTMAXTIME, gui = False):
     time_left -= time_left * time_error_rate
 
     # Boucle principale de l'algorithme génétique
-    while time_left > TIMELIMIT:
+    while time_left > TIMELIMIT and stagnation < MAXSAMESOLUTIONNUMBER:
         time1 = time()
         population = selection(population)
+
+        # A ce moment, la liste est triée car la selection vient de le faire
+        best_cost = population[0].cost
+
+        if best_cost == old_best_cost:
+            stagnation += 1
+        else:
+            stagnation = 0
+
+        old_best_cost = best_cost
 
         if gui:
             draw_best_path(population, window)
@@ -378,7 +397,7 @@ def solve(cities_list, window = None, maxtime = DEFAULTMAXTIME, gui = False):
 
         # Dès que les 3/4 du temps est passé, on tente d'augmenter le taux de mutation
         # pour éviter de rester dans un minimum local
-        if time_left < maxtime/4 and not augmentation_up:
+        if time_left < maxtime/4 or stagnation > 2000 and not augmentation_up:
             mutation_rate = second_mutation_rate
             augmentation_up = True
 
@@ -487,7 +506,7 @@ def clear_window(window):
     window.fill(BLACK)
 
     for point in cities:
-        pygame.draw.rect(window, WHITE, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
+        pygame.draw.rect(window, RED, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
 
 def draw_best_path(population, window):
     """Dessin du meilleur chemin trouvé. Attention, la population doit être triée!
@@ -523,7 +542,7 @@ def display(cities_list = None, maxtime = DEFAULTMAXTIME, gui = True, window = N
         cities_list = []
     else:
         for point in cities_list:
-            pygame.draw.rect(window, WHITE, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
+            pygame.draw.rect(window, RED, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
 
     continued = True
 
@@ -546,7 +565,7 @@ def display(cities_list = None, maxtime = DEFAULTMAXTIME, gui = True, window = N
                 x_mouse, y_mouse = event.pos[0], event.pos[1]
                 # Attention : envoie une liste de tuples! La synthaxe est fine.
                 cities_list.append(City(pos=(x_mouse, y_mouse)))
-                pygame.draw.rect(window, WHITE, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
+                pygame.draw.rect(window, RED, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
 
         pygame.display.update()
 
@@ -615,6 +634,7 @@ class Chromosome(object):
             new_genes_list[start_index:end_index] = part_to_reverse
 
         return Chromosome(new_genes_list)
+
 
     def calculate_cost(self):
         """Calcul du cout du chromosome, ici la distance total vol d'oiseau
