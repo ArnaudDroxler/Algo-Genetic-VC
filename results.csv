@@ -1,0 +1,8 @@
+Test;DroxlerRoy;
+data\pb005.txt (1s);903;
+data\pb010.txt (5s);1490;
+data\pb010.txt (10s);1490;
+data\pb050.txt (30s);2864;
+data\pb050.txt (60s);2903;
+data\pb100.txt (20s);4320;
+data\pb100.txt (90s);4146;

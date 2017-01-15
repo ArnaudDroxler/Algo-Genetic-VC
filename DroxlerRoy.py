@@ -1,3 +1,46 @@
+"""
+    Auteurs                      : Arnaud Droxler & Axel Roy
+    Date dernière modification   : 15 Janvier 2017
+    But                          : Implémentation d'un algorithme génétique pour résoudre
+                                   le problème du voyageur de commerce
+
+    Informations globales à propos de l'algorithme génétique
+
+    L'algorithme génétique utilise les trois phases habituelles d'un algorithme génétique, soit
+    la sélection, le croisement puis les mutations.
+
+    Nous avons choisi de privilégier une selection élitiste, très simple et très rapide
+    implémentée par une simple list comprehension.
+
+    Ce choix se combine avec un croisement en deux points, avec réarrangement via la
+    méthode du croisement ox.
+
+    Pour les mutations, on selectionne au hasard des chromosome qui vont générer une mutation.
+    Le chromosome selectionné n'est jamais remplacé, on génère un nouveau chromosome, sans se soucier
+    de son efficacité. C'est la prochaine phase de selection qui va le garder ou non.
+
+    Globabelement, on peut constater que les choix effectués dans les méthodes de selection,
+    croisements et mutations permettent d'explorer largement le domaine des solutions,
+    mais que les performances en terme de convergence sont affectés. Ceci est volontaire,
+    et les résultats pour un nombre de villes conséquents avec un temps court fourni des
+    résultats tout de même très satisfaisants.
+
+    On peut voir en mode graphique qu'en laissant suffisamment de temps, on arrive rarement
+    à une solution qui présente des croisements de routes, l'algorithme réussi à démeler fortement
+    les noeuds.
+
+    Nous avons implémenté une augmentation du nombre de mutations en fin de temps à disposition
+    pour faire en sorte qu'il ne reste pas bloqué dans un minimum local, et il est visuellement
+    possible d'observer qu'il arrive que cela permet de sortir d'un minimum local.
+
+    En effet, il n'est pas rare que l'algorithme parte d'un chemin sans croisements
+    et trouve un nouveau chemin très différent, qui comporte des croisements de chemins,
+    le fait muter et le dénoue.
+
+    Pour plus d'informations, veuillez lire le README.
+
+"""
+
 import pygame
 from pygame.locals import *
 from pygame.math import Vector2
@@ -6,16 +49,32 @@ import sys, getopt
 import random
 from math import sqrt
 from time import time
+from math import hypot
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
 cities = None
+# Nombre de chromosomes formant la population
 population_size = 20
-mutation_rate = 40
-selection_rate = 70
+# Pourcentage de la population qui va subir une mutation
+mutation_rate = 30
+# Pourcentage des chromosomes gardés lors de la phase de selection
+selection_rate = 60
+
+
+# Sert à l'enregistrement du temps lors de l'appel comme module
+starting_time = 0
+
+
+# Constantes pour PyGame
 WHITE = (255,255,255)
 BLACK = (0,0,0)
-POINTSIZE = 3
-maxtime = 45
+
+# Taille des points pour représenter les villes
+POINTSIZE = 2
+# Temps que l'on laisse à disposition pour retourner la solution. Avec 0.05s on est très très large, cela prend en général 0.005s
+TIMELIMIT = 0.1
+# Temps laissé à l'Algorithme par défaut si aucun paramètre n'est passé.
+DEFAULTMAXTIME = 20
 
 ################################################################################
 #  Algorithme génétique
@@ -47,14 +106,30 @@ def populate(count):
     return population
 
 def selection(population):
+    """Seleciton purement élitiste, volontairement afin de ne pas perdre de temps à sélectionner.
+    On se contente de trier et de selectionner les x% meilleurs.
+    Cela se couple avec la volonté des croisements et des selections de parcourir au maximum le
+    domaine de solution en favorisant le hasard, et le fait que les mutations créent des nouveaux chromosomes.
+    A la fin de la mutation, la population a une taille plus grande que la taille définie via la variable globale
+    population_size.
+    On se retrouve avec des chromosomes très différents, dans la population, ce qui implique que la selection
+    par roulette demanderai du temps pour en pas réellement améliorer le tirage.
+    """
     population = sorted(population, key=lambda chromosome: chromosome.cost)
     population = population[:(int)(len(population)/100 * selection_rate)]
 
     return population
 
 def crossing(population, size):
-    start_xo_index = int(len(population[0].genes) / 2 - len(population[0].genes) / 4)
-    end_xo_index = int(len(population[0].genes) / 2 + len(population[0].genes) / 4)
+    """ Le croisement s'effectue via la méthode de croisement en deux points (ox).
+    Les deux chromosomes qui sont utilisés pour le croisement sont choisi aléatoirement.
+    La portion qui est réarrangée pour être réorganisée est toujours de la taille de la moitié
+    des gênes qui composent un chemin. On pourrait imaginer faire varier la longueur à chaque
+    croisement, mais il faut vérifier que ca apporte vraiment quelque chose.
+
+    """
+    start_ox_index = int(len(population[0].genes) / 2 - len(population[0].genes) / 4)
+    end_ox_index = int(len(population[0].genes) / 2 + len(population[0].genes) / 4)
 
     nb_to_create = size - len(population)
 
@@ -62,15 +137,15 @@ def crossing(population, size):
         chromosome_x = random.choice(population)
         chromosome_y = random.choice(population)
 
-        new_genes_list = xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index)
+        new_genes_list = ox_cross(chromosome_x, chromosome_y, start_ox_index, end_ox_index)
 
         # Ajout du nouveau chromosome à la population
         population.append(Chromosome(new_genes_list))
 
     return population
 
-def xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index):
-    """ Principe global de mutation : Mutation XO.
+def ox_cross(chromosome_x, chromosome_y, start_ox_index, end_ox_index):
+    """ Principe global de mutation : Mutation ox.
         On selectionne deux Chromosomes x et y parmis la population.
         On détermine une section où on va insérer la section de y dans le même endroit de x.
         Il faut pour ceci préparer x à recevoir les gènes de y en :
@@ -111,13 +186,13 @@ def xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index):
     """
 
     # Détermination des valeurs à supprimer dans x, tirées de la portion y
-    list_to_replace = chromosome_y.genes[start_xo_index:end_xo_index+1]
+    list_to_replace = chromosome_y.genes[start_ox_index:end_ox_index+1]
 
     # Remplacement de ces valeurs dans x avec des None
     new_genes_list = [value if value not in list_to_replace else None for value in chromosome_x.genes]
 
     # Comptage du nombre de None à droite de la section (pour le décalage)
-    nb_none_right = new_genes_list[end_xo_index+1:].count(None)
+    nb_none_right = new_genes_list[end_ox_index+1:].count(None)
 
     # Suppression des None dans la liste pour les rotations
     new_genes_list = [value for value in new_genes_list if not value == None]
@@ -125,74 +200,134 @@ def xo_cross(chromosome_x, chromosome_y, start_xo_index, end_xo_index):
     # Rotation à droite des éléments
     for _ in range(0,nb_none_right):
         new_genes_list.insert(len(new_genes_list), new_genes_list.pop(0))
-    list_to_insert = chromosome_y.genes[start_xo_index:end_xo_index+1]
+    list_to_insert = chromosome_y.genes[start_ox_index:end_ox_index+1]
 
     # Insertion des valeurs de y dans la section préparée
-    new_genes_list[start_xo_index:start_xo_index] = list_to_insert
+    new_genes_list[start_ox_index:start_ox_index] = list_to_insert
 
     return new_genes_list
 
 def mutate(population):
-    """Pour l'instant, la mutation est un simple swap d'indexes au hasard"""
+    """Mutation appliquée sur la population. Les échantillons qui subissent une mutation
+       Sont choisis totalement au hasard. On fait muter un certain taux de la population.
+       Très important, les mutations crées de nouveaux échantillons pour la population,
+       on ne perd pas les chromosomes de base.
+    """
     for _ in range(0, int(len(population) / 100 * mutation_rate)):
         chromosome = random.choice(population)
         population.append(chromosome.mutate())
 
     return population
 
-def solve(cities_list, window = None, maxtime = 0, gui = False):
-    #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
+def solve(cities_list, window = None, maxtime = DEFAULTMAXTIME, gui = False):
+    """ Résolution du problème du voyageur commercial.
+        cities list est une liste de ville qui sera utilisée pour résoudre le problème.
+        Les autres paramètres sont facultatifs :
+        window est l'instance de la fenêtre PyGame.
+        maxtime est le temps total de calcul désiré, en seconde.
+        gui détermine si on désire le rendu graphique en temps réel"""
     global cities
-    global population_size
+    global starting_time
+    global TIMELIMIT
+    global selection_rate
     global mutation_rate
-    cities = tuple(cities_list)
-    time_left = maxtime
 
-    population = populate(population_size)
+    # Second seuil de mutation pour tenter de faire sortir d'un minimum local
+    second_mutation_rate = 60
+    # Détermine si on est dans le second seuil de mutation
     augmentation_up = False
+    # Pourcentage d'erreur pour le calcul du temps écoulé entre deux cycles.
+    # Il est très grand pour ne pas prendre de risque pour l'évaluation via PVC-tester
+    time_error_rate = 0.02
 
-    # print("========================================")
-    # print("Chromosomes initiaux")
-    # for chromo in population:
-    #     print(chromo)
-    while time_left > 0:
+    if gui:
+        font = pygame.font.Font(None, 30)
+
+    # On fige volontairement la définition des villes en tuple, de manière globale
+    cities = tuple(cities_list)
+
+    # Création de la population
+    population = populate(population_size)
+
+    # Calcul du temps écoulé depuis le lancement du programme
+    elapsed_time = time() - starting_time
+    time_left = maxtime - elapsed_time
+    time_left -= time_left * time_error_rate
+
+    # Boucle principale de l'algorithme génétique
+    while time_left > TIMELIMIT:
         time1 = time()
         population = selection(population)
-        population = crossing(population, population_size)
-        population = mutate(population)
 
         if gui:
             draw_best_path(population, window)
-        time2 = time()
-        elapsedtime = time2 - time1
 
-        if time_left < maxtime/2 and not augmentation_up:
-            mutation_rate += 20
+        population = crossing(population, population_size)
+        population = mutate(population)
+
+        # Dès que les 3/4 du temps est passé, on tente d'augmenter le taux de mutation
+        # pour éviter de rester dans un minimum local
+        if time_left < maxtime/4 and not augmentation_up:
+            mutation_rate = second_mutation_rate
             augmentation_up = True
 
+        time2 = time()
+        elapsed_time = time2 - time1
+        elapsed_time = elapsed_time + elapsed_time * time_error_rate
+        time_left -= elapsed_time
 
-        time_left -= elapsedtime
-
-    # Ne pas oublier de mettre à jour l'affichage via l'objet window
-    print("Résultat")
+    # Mise en forme du retour de la meilleure solution trouvée
     population = sorted(population, key=lambda chromosome: chromosome.cost)
-    # for chromo in population:
-    #     print(chromo)
-    print(population[0])
+    best_solution = population[0]
+    best_cost = best_solution.cost
+    best_path = [cities_list[city].name for city in best_solution.genes]
 
+    # Dessin du meilleur chemin si on est en mode graphique
     if window != None:
         draw_best_path(population, window)
+        text = font.render("Coût : " + str(population[0].cost), True, WHITE)
+        textRect = text.get_rect()
+        window.blit(text, textRect)
 
-    print("========================================")
+    print("Meilleur cout", best_cost )
 
-    return True
+    return best_cost, best_path
 
 ################################################################################
 #  Fin Algorithme génétique
 ################################################################################
 
-def ga_solve(file = None, gui=True, maxtime=0):
-    return true
+def ga_solve(file = None, gui=True, maxtime=DEFAULTMAXTIME):
+    """Point d'entrée pour l'utilisation de cet algorithme comme module"""
+    return parametre(file,gui,maxtime)
+
+def parametre(file = None, gui=True, maxtime=DEFAULTMAXTIME):
+    """
+    Gestion des paramètres, suivant si le mode graphique est demandé, si on utilise
+    l'algorithme en import et si on a défini un temps limite.
+    """
+    window = None
+    cities_list = None
+    global starting_time
+    starting_time = time()
+
+    if(file):
+        cities_list = []
+        with open(file, "r") as fichier :
+            for line in fichier :
+                data = line.split()
+                cities_list.append(City((int(data[1]),int(data[2])), data[0]))
+    if(gui):
+        window = pygame.display.set_mode((500, 500))
+
+    if (gui and not file):
+        maxtime = DEFAULTMAXTIME
+        return display(cities_list, maxtime,gui,window)
+    elif(not gui and file):
+        return solve(cities_list, window, maxtime, gui)
+    elif(gui and file):
+        return display(cities_list,maxtime,gui,window)
+
 
 def main(argv):
     """
@@ -215,44 +350,37 @@ def main(argv):
     optlist, args = getopt.getopt(argv, '' ,['nogui', 'maxtime=','help'])
 
     file = None
-    gui = False
-    maxtime = 5
+    gui = True
+    maxtime = DEFAULTMAXTIME
 
     if len(args) == 1:
         file = args[0]
 
     for o,a in optlist :
         if o == "--maxtime":
-            maxtime = a
+            maxtime = int(a)
         if o == "--nogui":
             gui = False
         if o == "--help":
              print(main.__doc__)
              sys.exit()
 
-    cities_list = []
-
-    if (gui):
-        display()
-    else:
-         with open(file, "r") as fichier :
-            for line in fichier :
-                data = line.split()
-                cities_list.append(City((int(data[1]),int(data[2]))))
-    display(cities_list)
+    parametre(file,gui,maxtime)
 
 ################################################################################
 #  Affichage
 ################################################################################
 
 def clear_window(window):
+    """ Dessin de la fenêtre avec les villes """
     window.fill(BLACK)
-    pygame.draw.rect(window, WHITE, [0, 0, 50, 20], 2)
 
     for point in cities:
         pygame.draw.rect(window, WHITE, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
 
 def draw_best_path(population, window):
+    """Dessin du meilleur chemin trouvé. Attention, la population doit être triée!
+    On pourrait la modifier pour ne passer que le meilleur chromosome"""
     clear_window(window)
 
     list_points = []
@@ -265,12 +393,20 @@ def draw_best_path(population, window):
     pygame.display.update()
 
 
-def display(cities_list = None):
+def display(cities_list = None, maxtime = DEFAULTMAXTIME, gui = True, window = None):
+    """Gestion de l'affichage via PyGame"""
     LEFTCLICK = 1                     # Défini ainsi dans pygame
-    gui = True
-    global maxtime
+    global starting_time
 
-    window = pygame.display.set_mode((500, 500))
+    pygame.init()
+    pygame.display.set_caption('Problème du voyageur commercial')
+    font = pygame.font.Font(None, 30)
+    text = font.render("Temps : " + str(maxtime) +  "secondes. Pressez enter pour lancer", True, WHITE)
+    textRect = text.get_rect()
+    window.blit(text, textRect)
+    cost = -1
+    best_path = []
+    max_time_relauch = maxtime
 
     if cities_list == None:
         cities_list = []
@@ -278,32 +414,31 @@ def display(cities_list = None):
         for point in cities_list:
             pygame.draw.rect(window, WHITE, [point.pos.x, point.pos.y, POINTSIZE, POINTSIZE])
 
-    # Draw a rectangle outline
-    lauch_button = pygame.draw.rect(window, WHITE, [0, 0, 50, 20], 2)
-
     continued = True
 
     while continued:
         mouse_xy = pygame.mouse.get_pos()
-        over_launch = lauch_button.collidepoint(mouse_xy)
 
         for event in pygame.event.get():
             # On est obligé de faire en deux lignes car les événements parcourus peuvent retourner false.
             # On gère la fermeture via ESCAPE ou via la croix de la fenêtre
             if (event.type == KEYDOWN and event.key == K_ESCAPE) or (event.type == QUIT):
                 continued = False
+                return cost, best_path
+
+            if (event.type == KEYDOWN and event.key == K_RETURN):
+                starting_time = time()
+                cost, best_path = solve(cities_list, window, max_time_relauch, gui)
 
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
-                if over_launch:
-                    solve(cities_list, window, maxtime, gui)
-                else:
-                    x_mouse, y_mouse = event.pos[0], event.pos[1]
-                    # Attention : envoie une liste de tuples! La synthaxe est fine.
-                    cities_list.append(City(pos=(x_mouse, y_mouse)))
-                    pygame.draw.rect(window, WHITE, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
+                x_mouse, y_mouse = event.pos[0], event.pos[1]
+                # Attention : envoie une liste de tuples! La synthaxe est fine.
+                cities_list.append(City(pos=(x_mouse, y_mouse)))
+                pygame.draw.rect(window, WHITE, (x_mouse, y_mouse, POINTSIZE, POINTSIZE))
 
         pygame.display.update()
+
 
 ################################################################################
 #  Classes
@@ -325,7 +460,8 @@ class City(object):
         City.last_id = City.last_id + 1
 
     def __repr__(self):
-        return "[id:" + str(self.id) + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
+        # return "[id:" + str(self.id) + " name : "+ self.name + " X:" + str(self.pos[0]) + " Y:" + str(self.pos[1]) + "]"
+        return "[id:{0.id} name:{0.name} X:{0.pos.x} Y:{0.pos.y}]".format(self)
 
 class Chromosome(object):
     """ représentation d'un individu sous la forme d'un chemin (suite de villes)
@@ -338,16 +474,21 @@ class Chromosome(object):
             self.cost = self.calculate_cost()
 
     def mutate(self):
-        """Mutation du chromosome simple en inversant deux indexes au hasard.
-           On ne garde la mutation que si elle est meilleure. Il se trouve
-           que l'on pourrait imaginer qu'inverser deux villes connexes pourrait
-           améliorer le résultat mais ca ne semble pas être le cas."""
+        """Mutation du chromosome en selectionnant une partie des gênes au hasard
+        et en inversant cette portion. On l'effectue deux fois de suite, le faire
+        plus de fois ne semble pas améliorer drastiquement les résultats, et on
+        perd du temps.
+
+        Il a été implémenté un mélange entre swap au hasard de gênes et inversion
+        de l'ordre de séquences de gênes, mais le swap ne semble pas apporter
+        d'améliorations notable"""
+
+        # On évite de recopier uniquement la référence
         new_genes_list = list(self.genes)
 
         # for _ in range(0,1):
         #     index1 = random.randrange(0, len(self.genes))
         #     index2 =  random.randrange(0, len(self.genes))
-        #
         #     new_genes_list[index2], new_genes_list[index1] = new_genes_list[index1], new_genes_list[index2]
 
         for _ in range(0,2):
@@ -365,6 +506,8 @@ class Chromosome(object):
         return Chromosome(new_genes_list)
 
     def calculate_cost(self):
+        """Calcul du cout du chromosome, ici la distance total vol d'oiseau
+        selon l'ordre des villes"""
         nb_genes = len(self.genes)
         distance = 0
 
@@ -375,11 +518,20 @@ class Chromosome(object):
             villeA = cities[index1]
             villeB = cities[index2]
 
-            dx = abs(villeA.pos.x - villeB.pos.x)
-            dy = abs(villeA.pos.y - villeB.pos.y)
+            # Ces quelques lignes sont un point critique des performance de l'algorithme
+            # Le changement de la méthode de calcul de la distance à vol d'oiseaux
+            # Représente des variations du temps importante.
 
-            distance += villeA.pos.distance_to(villeB.pos)
+            # Utiliser la classe vec2 de pygame améliore d'un quart le temps de calcul
+            # par rapport aux autres méthodes. Les autres méthodes sont laissées en
+            # commentaire à titre informatif
+
+            # dx = abs(villeA.pos.x - villeB.pos.x)
+            # dy = abs(villeA.pos.y - villeB.pos.y)
+
+            # distance += hypot(dx,dy)
             # distance += sqrt(dx**2 + dy**2)
+            distance += villeA.pos.distance_to(villeB.pos)
         return distance
 
     def __repr__(self):
