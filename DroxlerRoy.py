@@ -10,15 +10,20 @@ from math import hypot
 
 # Contient le tableau de villes. Une fois instancié, il n'est plus modifié.
 cities = None
+# Nombre de chromosomes formant la population
 population_size = 20
-mutation_rate = 35
-selection_rate = 60
+# Pourcentage de la population qui va subir une mutation
+mutation_rate = 40
+# Constantes pour PyGame
 WHITE = (255,255,255)
 BLACK = (0,0,0)
-POINTSIZE = 5
+# Taille des points pour représenter les villes
+POINTSIZE = 2
 # Temps que l'on laisse à disposition pour retourner la solution. Avec 0.05s on est très très large, cela prend en général 0.005s
 TIMELIMIT = 0.1
 starting_time = 0
+selection_rate = 60
+DEFAULTMAXTIME = 20
 
 ################################################################################
 #  Algorithme génétique
@@ -143,48 +148,49 @@ def mutate(population):
 
     return population
 
-def solve(cities_list, window = None, maxtime = 20, gui = False):
-    #Synthaxe horrible pour définir l'attribut statique de la liste de ville. A changer.
+def solve(cities_list, window = None, maxtime = DEFAULTMAXTIME, gui = False):
     global cities
     global starting_time
     global TIMELIMIT
-    population_size = 20
-    mutation_rate = 35
-    second_mutation_rate = mutation_rate + 10
-    selection_rate = 60
+    global selection_rate
+    global mutation_rate
 
+    # Second seuil de mutation pour tenter de faire sortir d'un minimum local
+    second_mutation_rate = 60
+    # Détermine si on est dans le second seuil de mutation
+    augmentation_up = False
+    # Pourcentage d'erreur pour le calcul du temps écoulé entre deux cycles.
+    # Il est très grand pour ne pas prendre de risque pour l'évaluation via PVC-tester
+    time_error_rate = 0.02
 
-    time_error_rate = 0.2
+    if gui:
+        font = pygame.font.Font(None, 30)
 
     cities = tuple(cities_list)
-
     population = populate(population_size)
-    augmentation_up = False
 
-    # print("========================================")
-    # print("Chromosomes initiaux")
-    # for chromo in population:
-    #     print(chromo)
+    # Calcul du temps écoulé depuis le lancement du programme
     elapsed_time = time() - starting_time
     time_left = maxtime - elapsed_time
     time_left -= time_left * time_error_rate
-    print("Time left", time_left)
 
     while time_left > TIMELIMIT:
         time1 = time()
         population = selection(population)
-        population = crossing(population, population_size)
-        population = mutate(population)
 
         if gui:
             draw_best_path(population, window)
-        time2 = time()
-        elapsed_time = time2 - time1
+
+        population = crossing(population, population_size)
+        population = mutate(population)
 
         if time_left < maxtime/4 and not augmentation_up:
             mutation_rate = second_mutation_rate
             augmentation_up = True
 
+        time2 = time()
+        elapsed_time = time2 - time1
+        elapsed_time = elapsed_time + elapsed_time * time_error_rate
         time_left -= elapsed_time
 
     population = sorted(population, key=lambda chromosome: chromosome.cost)
@@ -194,6 +200,10 @@ def solve(cities_list, window = None, maxtime = 20, gui = False):
 
     if window != None:
         draw_best_path(population, window)
+        text = font.render("Coût : " + str(population[0].cost), True, WHITE)
+        textRect = text.get_rect()
+        window.blit(text, textRect)
+
 
     print("Meilleur cout", best_cost )
 
@@ -203,10 +213,10 @@ def solve(cities_list, window = None, maxtime = 20, gui = False):
 #  Fin Algorithme génétique
 ################################################################################
 
-def ga_solve(file = None, gui=False, maxtime=10):
+def ga_solve(file = None, gui=True, maxtime=DEFAULTMAXTIME):
      return parametre(file,gui,maxtime)
 
-def parametre(file = None, gui=True, maxtime=10):
+def parametre(file = None, gui=True, maxtime=DEFAULTMAXTIME):
     window = None
     cities_list = None
     global starting_time
@@ -222,10 +232,9 @@ def parametre(file = None, gui=True, maxtime=10):
         window = pygame.display.set_mode((500, 500))
 
     if (gui and not file):
-        maxtime = 10
+        maxtime = DEFAULTMAXTIME
         return display(cities_list, maxtime,gui,window)
     elif(not gui and file):
-        print()
         return solve(cities_list, window, maxtime, gui)
     elif(gui and file):
         return display(cities_list,maxtime,gui,window)
@@ -253,7 +262,7 @@ def main(argv):
 
     file = None
     gui = True
-    maxtime = 60
+    maxtime = DEFAULTMAXTIME
 
     if len(args) == 1:
         file = args[0]
@@ -292,8 +301,19 @@ def draw_best_path(population, window):
     pygame.display.update()
 
 
-def display(cities_list = None, maxtime = 10,gui = True,window = None):
+def display(cities_list = None, maxtime = DEFAULTMAXTIME, gui = True, window = None):
     LEFTCLICK = 1                     # Défini ainsi dans pygame
+    global starting_time
+
+    pygame.init()
+    pygame.display.set_caption('Problème du voyageur commercial')
+    font = pygame.font.Font(None, 30)
+    text = font.render("Temps : " + str(maxtime) +  "secondes. Pressez enter pour lancer", True, WHITE)
+    textRect = text.get_rect()
+    window.blit(text, textRect)
+    cost = -1
+    best_path = []
+    max_time_relauch = maxtime
 
     if cities_list == None:
         cities_list = []
@@ -311,9 +331,11 @@ def display(cities_list = None, maxtime = 10,gui = True,window = None):
             # On gère la fermeture via ESCAPE ou via la croix de la fenêtre
             if (event.type == KEYDOWN and event.key == K_ESCAPE) or (event.type == QUIT):
                 continued = False
+                return cost, best_path
 
             if (event.type == KEYDOWN and event.key == K_RETURN):
-                return solve(cities_list, window, maxtime, gui)
+                starting_time = time()
+                cost, best_path = solve(cities_list, window, max_time_relauch, gui)
 
             # Gestion des événements souris
             if event.type == MOUSEBUTTONDOWN and event.button == LEFTCLICK:
@@ -398,9 +420,9 @@ class Chromosome(object):
             dx = abs(villeA.pos.x - villeB.pos.x)
             dy = abs(villeA.pos.y - villeB.pos.y)
 
-            distance += hypot(dx,dy)
+            # distance += hypot(dx,dy)
 
-            # distance += villeA.pos.distance_to(villeB.pos)
+            distance += villeA.pos.distance_to(villeB.pos)
             # distance += sqrt(dx**2 + dy**2)
         return distance
 
